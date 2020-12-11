@@ -10,7 +10,7 @@ class Teacher(nn.Module):
         super(Teacher, self).__init__()
         self.dropout_prob = 0.1
         self.conv_layers = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=32, kernel_size=5),
+            nn.Conv2d(in_channels=1, out_channels=32, kernel_size=5),
             nn.ReLU(),
             nn.Conv2d(in_channels=32, out_channels=64, kernel_size=5),
             nn.ReLU(),
@@ -20,7 +20,7 @@ class Teacher(nn.Module):
             nn.Dropout2d(self.dropout_prob),
             nn.AvgPool2d(kernel_size=3)
         )
-        self.fc1 = nn.Linear(3136, 512)
+        self.fc1 = nn.Linear(2304, 512)
         self.bn = nn.BatchNorm1d(512)
         self.do = nn.Dropout2d(self.dropout_prob)
         self.fc2 = nn.Linear(512, n_class)

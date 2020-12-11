@@ -16,7 +16,7 @@ import numpy as np
 TRAIN = True
 TRAIN_TEACHER = False
 TEST = False
-DATASET = "Cifar"
+DATASET = "Mnist"
 
 # Constants
 TEACHER_MODEL_PATH = "./models/teacher"
@@ -66,7 +66,7 @@ if TRAIN:
     train_opts = trn.TrainingOptions()
     train_opts = trn.TrainingOptions()
     train_opts.optimizer_type = trn.OptimizerType.Adam
-    train_opts.learning_rate = 0.001
+    train_opts.learning_rate = 0.01
     train_opts.batch_size = 64
     train_opts.n_epochs = 50
     train_opts.use_gpu = True
@@ -76,7 +76,7 @@ if TRAIN:
     dist_loss = DistillationLoss(1, 2.5, 0.25)  # TODO: Search for the correct values from the paper
 
     # Initialzie student
-    init_data, init_labels = train_set.get_batch(-1, 0)
+    init_data, init_labels = train_set.get_batch(-1, 0, "cpu")
     student.initialize(init_data, init_labels)
     student.to("cuda:0")
     # Define distillation network
