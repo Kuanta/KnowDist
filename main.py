@@ -20,6 +20,7 @@ DATASET = "Mnist"
 
 # Constants
 TEACHER_MODEL_PATH = "./models/teacher"
+STUDENT_MODEL_PATH = "./models/student"
 
 # Func defs
 def validate_distillation(data, labels):
@@ -28,6 +29,7 @@ def validate_distillation(data, labels):
     labels = labels.cpu().data.numpy()
     corrects = [outputs[i] == labels[i] for i in range(len(outputs))]
     return sum(corrects) / len(corrects) * 100
+
 
 # Load dataset
 if DATASET == "Cifar":
@@ -38,7 +40,7 @@ if DATASET == "Cifar":
 else:
     mLoader = MNISTLoader("./data")
     train_set = mLoader.get_training_dataset()
-    val_set = None
+    val_set = mLoader.get_validation_dataset()
     test_set = mLoader.get_test_dataset()
 
 # Define networks
@@ -55,23 +57,29 @@ if TRAIN_TEACHER:
     train_opts.n_epochs = 50
     train_opts.use_gpu = True
     train_opts.save_model = True
-    train_opts.saved_model_name = "models/teacher"
+    train_opts.saved_model_name = TEACHER_MODEL_PATH
 
     trainer = trn.Trainer(teacher, train_opts)
     trainer.train(torch.nn.CrossEntropyLoss(), train_set, val_set, is_classification=True)
 else:
-    teacher.load_state_dict(torch.load("models/teacher"))
+    teacher.load_state_dict(torch.load(TEACHER_MODEL_PATH))
 if TRAIN:
     # Define training options
     train_opts = trn.TrainingOptions()
     train_opts = trn.TrainingOptions()
     train_opts.optimizer_type = trn.OptimizerType.Adam
     train_opts.learning_rate = 0.01
+    train_opts.learning_rate_drop_type = trn.SchedulerType.StepLr
+    train_opts.learning_rate_update_by_step = False  # Update at every epoch
+    train_opts.learning_rate_drop_factor = 0.5  # Halve the learning rate
+    train_opts.learning_rate_drop_step_count = 25  # Drop learning rate at every 25 epochs
     train_opts.batch_size = 64
-    train_opts.n_epochs = 50
+    train_opts.n_epochs = 100
     train_opts.use_gpu = True
     train_opts.custom_validation_func = validate_distillation
     train_opts.save_model = False
+    train_opts.verbose_freq = 500
+    train_opts.weight_decay = 0.004
     # Define loss
     dist_loss = DistillationLoss(1, 2.5, 0.25)  # TODO: Search for the correct values from the paper
 
@@ -83,6 +91,9 @@ if TRAIN:
     dist_net = DistillNet(student, teacher)
     trainer = trn.Trainer(dist_net, train_opts)
     results = trainer.train(dist_loss, train_set, val_set, is_classification=True)
-    torch.save(student.state_dict(), "models/student")
+    torch.save(student.state_dict(), STUDENT_MODEL_PATH)
+
+if TEST:
+    student.load_state_dict(torch.load(STUDENT_MODEL_PATH))
 
 
