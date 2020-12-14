@@ -186,7 +186,7 @@ class FuzzyRules(nn.Module):
     def forward(self, membership_matrices, t_norm):
 
         rule_indices = self.rule_masks.expand(membership_matrices.shape[0], -1, -1)
-        antecedents = torch.gather(membership_matrices, 1, rule_indices.long().to("cuda:0"))
+        antecedents = torch.gather(membership_matrices, 1, rule_indices.long().to(membership_matrices.device))
 
         if t_norm == TNormType.Min:
             min_values, _ = torch.min(antecedents,

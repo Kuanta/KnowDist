@@ -14,10 +14,10 @@ import numpy as np
 import os
 
 # Flags
-TRAIN = True
+TRAIN = False
 TRAIN_TEACHER = False
 TEST = False
-COMPARE = False
+COMPARE = True
 DATASET = "Mnist"
 
 EXP_NO = 4
@@ -123,9 +123,9 @@ if TEST:
 
 if COMPARE:
     # Compare kl and no kl
-    student_no_kl = Student(n_memberships=7, n_inputs=64, n_outputs=10).to("cuda:0")
-    student_kl = Student(n_memberships=7, n_inputs=64, n_outputs=10).to("cuda:0")
-    student_modified_kl = Student(n_memberships=7, n_inputs=64, n_outputs=10).to("cuda:0")
+    student_no_kl = Student(n_memberships=15, n_inputs=64, n_outputs=10).to("cuda:0")
+    student_kl = Student(n_memberships=15, n_inputs=64, n_outputs=10).to("cuda:0")
+    student_modified_kl = Student(n_memberships=15, n_inputs=64, n_outputs=10).to("cuda:0")
 
     init_data, init_labels = train_set.get_batch(-1, 0, "cuda:0")
     test_batch, test_labels = test_set.get_batch(-1, 0, "cuda:0")
