@@ -4,6 +4,28 @@ import torch.nn.functional as F
 from sklearn.decomposition import PCA
 from Networks.FuzzyLayer import FuzzyLayer
 
+class TeacherLite(nn.Module):
+    def __init__(self, n_class):
+        super(TeacherLite, self).__init__()
+        self.dropout_prob = 0.1
+        self.conv_layers = nn.Sequential(
+            nn.Conv2d(in_channels=1, out_channels=32, kernel_size=3),
+            nn.ReLU(),
+            nn.AvgPool2d(kernel_size=3),
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3),
+            nn.ReLU(),
+            nn.AvgPool2d(kernel_size=3),
+            nn.ReLU(),
+        )
+        self.fc1 = nn.Linear(256, 32)
+        self.fc2 = nn.Linear(32, n_class)
+
+    def forward(self, x):
+        x = self.conv_layers(x)
+        x = x.view(x.shape[0], -1)
+        x = self.fc1(x)
+        x = self.fc2(x)
+        return x
 
 class Teacher(nn.Module):
     def __init__(self, n_class):
@@ -55,13 +77,16 @@ class Student(nn.Module):
         :param init_data:
         :return:
         '''
-        # 1) Apply PCA to extract 64 features
-        self.pca = PCA(64)
+        self.fit_pca(init_data, init_labels)
         flattened = init_data.view(init_data.shape[0], -1)
-        self.pca.fit(flattened.numpy())
         fitted = self.pca.transform(flattened.numpy())
         # 2) Initialize the weights of the fuzzy layer using c-means
         self.fuzzy_layer.activation_layer.initialize_gaussians(fitted, init_labels)
+
+    def fit_pca(self, init_data:torch.Tensor, init_labels: torch.Tensor):
+        self.pca = PCA(64)
+        flattened = init_data.view(init_data.shape[0], -1)
+        self.pca.fit(flattened.detach().cpu().numpy())
 
 class DistillNet(nn.Module):
     def __init__(self, student, teacher):

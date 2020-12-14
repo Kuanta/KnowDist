@@ -41,16 +41,14 @@ class GaussianLayer(nn.Module):
     Defines a layer for gaussian membership functions
     """
 
-    def __init__(self, n_memberships, n_inputs, device, n_outputs=1, trainable=False, mu=None, sigma=None):
+    def __init__(self, n_memberships, n_inputs, device, n_outputs=1, trainable=False):
         super(GaussianLayer, self).__init__()
         self.n_memberships = n_memberships
         self.n_inputs = n_inputs
         self.n_outputs = n_outputs
         self.trainable = trainable
-        self.mu = mu
-        self.sigma = sigma
         self.device = device
-        # self.initialize_gaussians()
+        self.initialize_gaussians()
 
     def forward(self, x):
         output = [self.calculate_memberships(batch, self.mu, self.sigma) for batch in x]
@@ -66,15 +64,15 @@ class GaussianLayer(nn.Module):
 
     def initialize_gaussians(self, TrainData=None, TrainLabels=None):
         if TrainData is not None and TrainLabels is not None:
-            self.update_membs_with_fcm(TrainData, TrainLabels)
+            self.update_membs_with_fcm(TrainData)
         else:
             self.sigma = torch.rand(size=(self.n_memberships, self.n_inputs), dtype=torch.double).to(self.device)
             self.mu = torch.rand(size=(self.n_memberships, self.n_inputs), dtype=torch.double).to(self.device)
             if self.trainable:
-                self.sigma = nn.Parameter(self.sigma)
-                self.mu = nn.Parameter(self.mu)
+                self.sigma = nn.Parameter(self.sigma.float())
+                self.mu = nn.Parameter(self.mu.float())
 
-    def update_membs_with_fcm(self, TrainData, TrainLabels):
+    def update_membs_with_fcm(self, TrainData):
         centers, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(
             TrainData.transpose(), self.n_memberships, 1.2, error=0.005, maxiter=1000, init=None)
 
@@ -88,7 +86,6 @@ class GaussianLayer(nn.Module):
         logs = np.sum(squared / membs, 0
                       , keepdims=True)
         logs = logs / N
-
         self.mu = nn.Parameter(torch.tensor(centers).float())
         self.sigma = nn.Parameter(torch.tensor(logs.squeeze(0)).float())
 
@@ -189,7 +186,7 @@ class FuzzyRules(nn.Module):
     def forward(self, membership_matrices, t_norm):
 
         rule_indices = self.rule_masks.expand(membership_matrices.shape[0], -1, -1)
-        antecedents = torch.gather(membership_matrices, 1, rule_indices.long())
+        antecedents = torch.gather(membership_matrices, 1, rule_indices.long().to("cuda:0"))
 
         if t_norm == TNormType.Min:
             min_values, _ = torch.min(antecedents,
@@ -225,13 +222,6 @@ class FuzzyLayer(nn.Module):
         self.t_norm = t_norm
 
         device = torch.device("cuda:0" if torch.cuda.is_available() and use_gpu else "cpu")
-        # if TrainData is not None and TrainLabels is not None:
-        #     if mu is not None or sigma is not None:
-        #         warnings.warn("Non None sigma or mu is given, TrainData and TrainLabels should be None")
-        #     self.update_membs_with_kmeans(TrainData=TrainData, TrainLabels=TrainLabels)
-        #
-        # self.gaussian_layer = GaussianLayer(n_memberships=self.n_memberships, n_inputs=self.n_inputs, device=device,
-        #                                     n_outputs=self.n_outputs, trainable=trainable_memberships)
 
         self.activation_layer = GaussianLayer(n_memberships=self.n_memberships, n_inputs=self.n_inputs, device=device,
                                              n_outputs=self.n_outputs, trainable=True)
@@ -242,14 +232,8 @@ class FuzzyLayer(nn.Module):
         self.rule_layer = FuzzyRules(n_memberships=self.n_memberships, n_inputs=self.n_inputs,
                                      clustering=self.clustering, device=device, n_random_rules=n_random_rules,
                                      rule_masks=pre_rule_masks)
-
         # Set rule masks as parameter
-
         self.n_rules = self.rule_layer.n_rules
-        # self.mu.requires_grad = True
-        # self.sigma.requires_grad = True
-        # self.sigma = nn.Parameter(self.sigma)
-        # self.mu = nn.Parameter(self.mu)
 
         # Initialize rule parameters (rho) randomly
         rho = torch.rand(size=(self.n_outputs, self.n_rules, self.n_inputs + 1))  # TODO: Search for alternative methods
