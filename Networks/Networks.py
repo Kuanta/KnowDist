@@ -57,13 +57,13 @@ class Teacher(nn.Module):
         return x
 
 class Student(nn.Module):
-    def __init__(self, n_inputs, n_memberships, n_outputs):
+    def __init__(self, n_inputs, n_memberships, n_outputs, learnable_memberships=True):
         super(Student, self).__init__()
         self.n_inputs = n_inputs
         self.n_memberships = n_memberships
         self.n_outputs = n_outputs
         self.pca = PCA(64)
-        self.fuzzy_layer = FuzzyLayer(n_memberships=n_memberships, n_inputs=64, n_outputs=10)
+        self.fuzzy_layer = FuzzyLayer(n_memberships=n_memberships, n_inputs=64, n_outputs=10, learnable_memberships=learnable_memberships)
 
     def forward(self, x):
         device = x.device
@@ -81,6 +81,7 @@ class Student(nn.Module):
         flattened = init_data.view(init_data.shape[0], -1)
         fitted = self.pca.transform(flattened.numpy())
         # 2) Initialize the weights of the fuzzy layer using c-means
+        print("Activating Fuzzy")
         self.fuzzy_layer.activation_layer.initialize_gaussians(fitted, init_labels)
 
     def fit_pca(self, init_data:torch.Tensor, init_labels: torch.Tensor):

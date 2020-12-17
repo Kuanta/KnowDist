@@ -49,27 +49,25 @@ def train_student(train_set, val_set, teacher, params):
     train_opts.learning_rate_drop_type = trn.SchedulerType.StepLr
     train_opts.learning_rate_update_by_step = False  # Update at every epoch
     train_opts.learning_rate_drop_factor = 0.5  # Halve the learning rate
-    train_opts.learning_rate_drop_step_count = 5  # Drop learning rate at every 25 epochs
+    train_opts.learning_rate_drop_step_count = params.learn_drop_epochs
     train_opts.batch_size = 64
-    train_opts.n_epochs = 20
+    train_opts.n_epochs = params.n_epochs
     train_opts.use_gpu = True
     train_opts.custom_validation_func = validate_distillation
     train_opts.save_model = False
     train_opts.verbose_freq = 100
     train_opts.weight_decay = 0.004
+    train_opts.shuffle_data = True
     # Define loss
     dist_loss = DistillationLoss(STUDENT_TEMP, TEACHER_TEMP, ALPHA)
 
-    student = Student(n_memberships=N_RULES, n_inputs=64, n_outputs=10)
-    init_data, init_labels = train_set.get_batch(-1, 0, "cpu")
-    student.initialize(init_data, init_labels)
-    student.to("cuda:0")
-
+    student = Student(n_memberships=N_RULES, n_inputs=64, n_outputs=10, learnable_memberships=params.learn_ants)
     # Initialzie student
     print("Initializing Student")
     init_data, init_labels = train_set.get_batch(-1, 0, "cpu")
     student.initialize(init_data, init_labels)
     print("Done Initializing Student")
+    student.fuzzy_layer.draw(30)
     student.to("cuda:0")
     # Define distillation network
     dist_net = DistillNet(student, teacher)
@@ -92,12 +90,15 @@ if __name__ == "__main__":
 
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--exp_id", default=1, type=int)
+    parser.add_argument("--exp_id", default=4, type=int)
     parser.add_argument("--exp_no", default=1, type=int)
     parser.add_argument("--student_temp", default=1, type=float)
-    parser.add_argument("--teacher_temp", default=1, type=float)
-    parser.add_argument("--alpha", type=float, default=0, help="ALpha variable in the loss. 1 means full KL")
-    parser.add_argument("--n_rules", type=int, default=7, help="Number of memberships")
+    parser.add_argument("--teacher_temp", default=7.5, type=float)
+    parser.add_argument("--alpha", type=float, default=0.75, help="Alpha variable in the loss. 1 means full KL")
+    parser.add_argument("--n_rules", type=int, default=15, help="Number of memberships")
+    parser.add_argument("--learn_ants", type=bool, default=True, help="If set to true, membership funcitons won't be learned")
+    parser.add_argument("--n_epochs", type=int, default=20)
+    parser.add_argument("--learn_drop_epochs", type=int, default=5, help="Number of epochs to train before updating learning rate")
 
     args = parser.parse_args()
     # Load dataset

@@ -68,9 +68,15 @@ class GaussianLayer(nn.Module):
         else:
             self.sigma = torch.rand(size=(self.n_memberships, self.n_inputs), dtype=torch.double).to(self.device)
             self.mu = torch.rand(size=(self.n_memberships, self.n_inputs), dtype=torch.double).to(self.device)
+            self.sigma = nn.Parameter(self.sigma.float())
+            self.mu = nn.Parameter(self.mu.float())
+
             if self.trainable:
-                self.sigma = nn.Parameter(self.sigma.float())
-                self.mu = nn.Parameter(self.mu.float())
+                self.sigma.requires_grad = True
+                self.mu.requires_grad = True
+            else:
+                self.sigma.requires_grad = False
+                self.mu.requires_grad = False
 
     def update_membs_with_fcm(self, TrainData):
         centers, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(
@@ -79,15 +85,22 @@ class GaussianLayer(nn.Module):
 
         # Calculate standard deviations
         diffs = np.expand_dims(TrainData, 1) - np.expand_dims(centers, 0)
-        squared = np.square(diffs)
+        squared = -1*np.square(diffs)
         membs = np.expand_dims(2 * np.log(u.transpose()), 2)
-        logs = squared / membs
+        logs = np.sqrt(squared / membs)
         N = logs.shape[0]
-        logs = np.sum(squared / membs, 0
-                      , keepdims=True)
+        logs = np.sum(squared / membs, 0, keepdims=True)
         logs = logs / N
-        self.mu = nn.Parameter(torch.tensor(centers).float())
-        self.sigma = nn.Parameter(torch.tensor(logs.squeeze(0)).float())
+
+        self.mu = nn.Parameter(torch.tensor(centers).float().to(self.device))
+        self.sigma = nn.Parameter(torch.tensor(logs.squeeze(0)).float().to(self.device))
+
+        if self.trainable:
+            self.sigma.requires_grad = True
+            self.mu.requires_grad = True
+        else:
+            self.sigma.requires_grad = False
+            self.mu.requires_grad = False
 
 
     def update_membs_with_kmeans(self, TrainData=None, TrainLabels=None):
@@ -131,12 +144,12 @@ class GaussianLayer(nn.Module):
         mu_values = np.transpose(mu_values, (1, 0))
         sigma_values = self.sigma.cpu().data.numpy()
         sigma_values = np.transpose(sigma_values, (1, 0))
-        x = np.linspace(-10, 10, 100000)
+        x = np.linspace(-5, 5, 100)
         for i in range(mu_values[input_index].size):
             mu_value = mu_values[input_index][i]
             sigma_value = sigma_values[input_index][i]
             y = np.exp(-(x - mu_value) * (x - mu_value) / (2 * sigma_value * sigma_value))
-            plt.plot(y)
+            plt.plot(x, y)
         plt.show()
 
 
@@ -145,7 +158,7 @@ class FuzzyRules(nn.Module):
     Defines a layer for calculating rule firings and rule outputs
     """
 
-    def __init__(self, n_memberships, n_inputs, clustering, device, n_random_rules=0, rule_masks=None):
+    def __init__(self, n_memberships, n_inputs, clustering, n_random_rules=0, rule_masks=None):
         super(FuzzyRules, self).__init__()
         self.rule_masks = None
         self.n_random_rules = n_random_rules
@@ -208,8 +221,8 @@ class FuzzyLayer(nn.Module):
 
     # TODO: clustering variable is pointless at this point since creating  every possible is not possible at the moment
     def __init__(self, n_memberships, n_inputs, n_outputs=1, clustering=True, use_gpu=True,
-                 trainable_memberships=True, n_random_rules=0, TrainData=None, TrainLabels=None, rule_generation=False,
-                 n_rules_generated=-1, t_norm=TNormType.Min):
+                 learnable_memberships=True, n_random_rules=0, TrainData=None, TrainLabels=None, rule_generation=False,
+                 n_rules_generated=-1, t_norm=TNormType.Product):
         super(FuzzyLayer, self).__init__()
         # Define params
         self.n_memberships = n_memberships
@@ -224,13 +237,13 @@ class FuzzyLayer(nn.Module):
         device = torch.device("cuda:0" if torch.cuda.is_available() and use_gpu else "cpu")
 
         self.activation_layer = GaussianLayer(n_memberships=self.n_memberships, n_inputs=self.n_inputs, device=device,
-                                             n_outputs=self.n_outputs, trainable=True)
+                                             n_outputs=self.n_outputs, trainable=learnable_memberships)
 
         pre_rule_masks = None  # If this is None, rule_layer will create rule masks (random+same indexed rules)
         if rule_generation:
             pre_rule_masks = self.generate_rule_masks(train_data=TrainData, rule_count=n_rules_generated).to(device)
         self.rule_layer = FuzzyRules(n_memberships=self.n_memberships, n_inputs=self.n_inputs,
-                                     clustering=self.clustering, device=device, n_random_rules=n_random_rules,
+                                     clustering=self.clustering, n_random_rules=n_random_rules,
                                      rule_masks=pre_rule_masks)
         # Set rule masks as parameter
         self.n_rules = self.rule_layer.n_rules
