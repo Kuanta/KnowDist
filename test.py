@@ -30,5 +30,5 @@ if __name__ == "__main__":
     init_data, init_labels = train_set.get_batch(-1, 0, "cpu")
     student.fit_pca(init_data, init_labels)
     student.to("cpu")
-    acc1 = test_experiment(student, test_set, 1, 1)
+    acc1 = test_experiment(student, test_set, 4, 2)
     print("Acc 1:{}".format(acc1))

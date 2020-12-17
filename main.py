@@ -15,7 +15,7 @@ import os
 
 # Flags
 TRAIN = False
-TRAIN_TEACHER = False
+TRAIN_TEACHER = True
 TEST = False
 COMPARE = True
 DATASET = "Mnist"
