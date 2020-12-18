@@ -67,7 +67,7 @@ def train_student(train_set, val_set, teacher, params):
     init_data, init_labels = train_set.get_batch(-1, 0, "cpu")
     student.initialize(init_data, init_labels)
     print("Done Initializing Student")
-    student.fuzzy_layer.draw(30)
+    student.fuzzy_layer.draw(0)
     student.to("cuda:0")
     # Define distillation network
     dist_net = DistillNet(student, teacher)
@@ -95,7 +95,7 @@ if __name__ == "__main__":
     parser.add_argument("--student_temp", default=1, type=float)
     parser.add_argument("--teacher_temp", default=7.5, type=float)
     parser.add_argument("--alpha", type=float, default=0.75, help="Alpha variable in the loss. 1 means full KL")
-    parser.add_argument("--n_rules", type=int, default=15, help="Number of memberships")
+    parser.add_argument("--n_rules", type=int, default=7, help="Number of memberships")
     parser.add_argument("--learn_ants", type=bool, default=True, help="If set to true, membership funcitons won't be learned")
     parser.add_argument("--n_epochs", type=int, default=20)
     parser.add_argument("--learn_drop_epochs", type=int, default=5, help="Number of epochs to train before updating learning rate")

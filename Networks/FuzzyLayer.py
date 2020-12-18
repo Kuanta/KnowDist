@@ -80,8 +80,14 @@ class GaussianLayer(nn.Module):
 
     def update_membs_with_fcm(self, TrainData):
         centers, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(
-            TrainData.transpose(), self.n_memberships, 1.2, error=0.005, maxiter=1000, init=None)
-
+            TrainData.transpose(), self.n_memberships, 1.8, error=0.001, maxiter=500, init=None, seed=42)
+        data = TrainData.transpose(1, 0)
+        centers2 = []
+        for i in range(data.shape[0]):
+            center, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(
+                np.expand_dims(data[i], 0), self.n_memberships, 1.8, error=0.001, maxiter=500,
+                init=None, seed=42)
+            centers2.append(center)
 
         # Calculate standard deviations
         diffs = np.expand_dims(TrainData, 1) - np.expand_dims(centers, 0)
@@ -92,9 +98,11 @@ class GaussianLayer(nn.Module):
         logs = np.sum(squared / membs, 0, keepdims=True)
         logs = logs / N
 
+        torch.rand(())
         self.mu = nn.Parameter(torch.tensor(centers).float().to(self.device))
-        self.sigma = nn.Parameter(torch.tensor(logs.squeeze(0)).float().to(self.device))
-
+        #self.sigma = nn.Parameter(torch.tensor(logs.squeeze(0)).float().to(self.device))
+        sigma = torch.rand(size=(self.n_memberships, self.n_inputs)).float().to(self.device)*0.5
+        self.sigma = nn.Parameter(sigma)
         if self.trainable:
             self.sigma.requires_grad = True
             self.mu.requires_grad = True
@@ -144,7 +152,7 @@ class GaussianLayer(nn.Module):
         mu_values = np.transpose(mu_values, (1, 0))
         sigma_values = self.sigma.cpu().data.numpy()
         sigma_values = np.transpose(sigma_values, (1, 0))
-        x = np.linspace(-5, 5, 100)
+        x = np.linspace(-5, 5, 1000)
         for i in range(mu_values[input_index].size):
             mu_value = mu_values[input_index][i]
             sigma_value = sigma_values[input_index][i]
