@@ -65,7 +65,6 @@ class Student(nn.Module):
         self.n_outputs = n_outputs
         self.pca = PCA(64)
         self.fuzzy_layer = FuzzyLayer(n_memberships=n_memberships, n_inputs=64, n_outputs=10, learnable_memberships=learnable_memberships)
-
         # These values will be set at each pca fit
         self.data_min = 0
         self.data_max = 0
@@ -73,19 +72,25 @@ class Student(nn.Module):
     def forward(self, x):
         device = x.device
         # Normalize batch using min and max
-        (x-self.data_min)/(self.data_max-self.data_min)
+        #x = (x-self.data_min)/(self.data_max-self.data_min)
         x = self.pca.transform(x.view(x.shape[0], -1).detach().cpu().numpy())
         x = (x-self.data_min)/(self.data_max-self.data_min)
         x = self.fuzzy_layer.forward(torch.tensor(x).to(device).float())
         return x
 
-    def initialize(self, init_data: torch.Tensor, init_labels: torch.Tensor):
+    def initialize(self, init_data: torch.Tensor, init_labels, load_params=True, filename=None):
         '''
-        Initializes the network by applying PCA a
-        :param init_data:
+        Initializes the network.
+        1) Fits the PCA
+        2) Initializes the fuzzy layer
+        :param init_data (torch.Tensor): Complete training data (or large as possible).
+        :param load_params (boolean): If set to true and the specified filepath is not none, activation parameters will
+        be load from the file
+        :param filename: If load_params is false and filepath is not none, calculated activation parameters will be saved
+        to the file with the given name
         :return:
         '''
-        self.fit_pca(init_data)
+        self.fit_pca(init_data)  # 1
         flattened = init_data.view(init_data.shape[0], -1)
         fitted = self.pca.transform(flattened.numpy())
         self.data_max = fitted.max()
@@ -93,13 +98,20 @@ class Student(nn.Module):
         # 2) Initialize the weights of the fuzzy layer using c-means
         print("Activating Fuzzy")
         fitted = self.min_max_normalization(fitted)
-        self.fuzzy_layer.activation_layer.initialize_gaussians(fitted, init_labels)
+        if load_params and filename is not None:
+            self.fuzzy_layer.activation_layer.load_parameters(filename)
+        else:
+            self.fuzzy_layer.activation_layer.initialize_gaussians(fitted, init_labels, filename)  # 2
 
     def fit_pca(self, init_data:torch.Tensor):
         self.pca = PCA(64, svd_solver='randomized',
           whiten=True)
         flattened = torch.flatten(init_data, start_dim=1)
         self.pca.fit(flattened.detach().cpu().numpy())
+
+    def feature_extraction(self, data):
+        x =  self.pca.transform(data.view(data.shape[0], -1).detach().cpu().numpy())
+        return self.min_max_normalization(x)
 
     def min_max_normalization(self, data):
         return (data-self.data_min)/(self.data_max-self.data_min)

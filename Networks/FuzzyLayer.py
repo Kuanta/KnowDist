@@ -6,6 +6,7 @@ import itertools
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 import skfuzzy as fuzz
+import json
 
 
 
@@ -60,11 +61,20 @@ class GaussianLayer(nn.Module):
         batch = torch.mul(batch, batch)
         batch = batch / 2
         batch = torch.exp(-1 * batch)
+        batch = batch+0.01  # 0's shut downs the firing rates
         return batch
 
-    def initialize_gaussians(self, TrainData=None, TrainLabels=None):
-        if TrainData is not None and TrainLabels is not None:
-            self.update_membs_with_fcm(TrainData)
+    def initialize_gaussians(self, TrainData=None, TrainLabels=None, params_filepath=None):
+        '''
+        Initializes the mean and sigma values for the layer. If training data is specified, parameters are calculated
+        using fuzzy c-means
+        :param TrainData: Training data
+        :param TrainLabels: Training labels
+        :param params_filepath: Filename to save the parameters. If none, parameters won't be saved
+        :return:
+        '''
+        if TrainData is not None:
+            self.update_membs_with_fcm(TrainData, params_filepath)
         else:
             self.sigma = torch.rand(size=(self.n_memberships, self.n_inputs), dtype=torch.double).to(self.device)
             self.mu = torch.rand(size=(self.n_memberships, self.n_inputs), dtype=torch.double).to(self.device)
@@ -78,37 +88,75 @@ class GaussianLayer(nn.Module):
                 self.sigma.requires_grad = False
                 self.mu.requires_grad = False
 
-    def update_membs_with_fcm(self, TrainData):
-        centers, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(
-            TrainData.transpose(), self.n_memberships, 1.8, error=0.001, maxiter=500, init=None, seed=42)
+    def update_membs_with_fcm(self, TrainData, params_filepath):
+        # centers, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(
+        #     TrainData.transpose(), self.n_memberships, 30, error=0.001, maxiter=500, init=None, seed=42)
         data = TrainData.transpose(1, 0)
-        centers2 = []
+        centers = []
+        sigmas = []
         for i in range(data.shape[0]):
+            print("Calculating centers for the {}th axis".format(i))
             center, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(
-                np.expand_dims(data[i], 0), self.n_memberships, 1.8, error=0.001, maxiter=500,
-                init=None, seed=42)
-            centers2.append(center)
+                np.expand_dims(data[i], 0), self.n_memberships, 1.5, error=0.001, maxiter=500,
+                init=None)
+            # Calculate standard deviations
+            diffs = np.expand_dims(data[i], 1) - center.squeeze(1)
+            squared = np.square(diffs)
+            membs = -2 * np.log(u.transpose())+torch.finfo(torch.float64).eps
+            _sigma = np.sqrt(squared / membs)
+            N = _sigma.shape[0]
+            _sigma = np.sum(_sigma, 0, keepdims=True)
+            _sigma = _sigma / N
 
-        # Calculate standard deviations
-        diffs = np.expand_dims(TrainData, 1) - np.expand_dims(centers, 0)
-        squared = -1*np.square(diffs)
-        membs = np.expand_dims(2 * np.log(u.transpose()), 2)
-        logs = np.sqrt(squared / membs)
-        N = logs.shape[0]
-        logs = np.sum(squared / membs, 0, keepdims=True)
-        logs = logs / N
+            centers.append(center)
+            sigmas.append(_sigma)
+        centers = np.array(centers).squeeze(-1).T
+        sigmas = np.array(sigmas).squeeze(1).T
 
-        torch.rand(())
         self.mu = nn.Parameter(torch.tensor(centers).float().to(self.device))
-        #self.sigma = nn.Parameter(torch.tensor(logs.squeeze(0)).float().to(self.device))
-        sigma = torch.rand(size=(self.n_memberships, self.n_inputs)).float().to(self.device)*0.5
-        self.sigma = nn.Parameter(sigma)
+        self.sigma = nn.Parameter(torch.tensor(sigmas).float().to(self.device))
+        #sigma = torch.rand(size=(self.n_memberships, self.n_inputs)).float().to(self.device)
+        #self.sigma = nn.Parameter(self.sigma.float())
+        #self.sigma = nn.Parameter(sigma)
         if self.trainable:
             self.sigma.requires_grad = True
             self.mu.requires_grad = True
         else:
             self.sigma.requires_grad = False
             self.mu.requires_grad = False
+        if params_filepath is not None:
+            self.save_parameters(params_filepath)
+
+    def save_parameters(self, filename):
+        '''
+        Saves the mean and sigma values of a gaussian funciton. Since the calculation takes a bit long and the values
+        should be the same for the same dataset, calculate only once these parameters and save them as json values
+        :param path_name:
+        :return:
+        '''
+        params = {
+            'mu':self.mu.detach().cpu().numpy().tolist(),
+            'sigma':self.sigma.detach().cpu().numpy().tolist()
+        }
+        with open(filename, "w") as f:
+            json.dump(params, f)
+
+    def load_parameters(self, filename):
+        with open(filename, "r") as f:
+            data = json.load(f)
+            #sigma = torch.ones(size=(self.n_memberships, self.n_inputs)).float().to(self.device)*sigma
+            self.sigma = nn.Parameter(torch.from_numpy(np.array(data["sigma"]).squeeze(1).T).float()*2)
+            # sigma = torch.rand(size=(self.n_memberships, self.n_inputs)).float().to(self.device)*2
+            # self.sigma = nn.Parameter(sigma)
+            self.mu = nn.Parameter(torch.from_numpy(np.array(data["mu"])).float())
+            if self.trainable:
+                self.sigma.requires_grad = True
+                self.mu.requires_grad = True
+            else:
+                self.sigma.requires_grad = False
+                self.mu.requires_grad = False
+
+
 
 
     def update_membs_with_kmeans(self, TrainData=None, TrainLabels=None):
@@ -128,7 +176,7 @@ class GaussianLayer(nn.Module):
             self.mu = torch.nn.Parameter(mu)
 
             # now, estimate the variances
-            sig = torch.ones((R, A))
+            sig = torch.ones((R, A))*1000
             # for r in range(R):
             #     inds = np.where(kmeans.labels_ == r)
             #     classdata = torch.squeeze(TrainData[inds, :])
@@ -152,13 +200,13 @@ class GaussianLayer(nn.Module):
         mu_values = np.transpose(mu_values, (1, 0))
         sigma_values = self.sigma.cpu().data.numpy()
         sigma_values = np.transpose(sigma_values, (1, 0))
-        x = np.linspace(-5, 5, 1000)
+        x = np.linspace(0, 1, 10000)
         for i in range(mu_values[input_index].size):
             mu_value = mu_values[input_index][i]
             sigma_value = sigma_values[input_index][i]
             y = np.exp(-(x - mu_value) * (x - mu_value) / (2 * sigma_value * sigma_value))
             plt.plot(x, y)
-        plt.show()
+        #plt.show()
 
 
 class FuzzyRules(nn.Module):
@@ -210,7 +258,7 @@ class FuzzyRules(nn.Module):
         antecedents = torch.gather(membership_matrices, 1, rule_indices.long().to(membership_matrices.device))
 
         if t_norm == TNormType.Min:
-            min_values, _ = torch.min(antecedents,
+            min_values, indices = torch.min(antecedents,
                                       dim=2)  # FIXME: Using product as T-norm causes underflow, have to use min
             return min_values
         elif t_norm == TNormType.Product:
@@ -303,19 +351,18 @@ class FuzzyLayer(nn.Module):
             return rule_masks
 
     def forward(self, x):
-        # Apply Min-Max Normalization
         batch_size = x.shape[0]
         if x.shape != (batch_size, self.n_inputs):
             raise Exception("Expected input shape of ", (1, self.n_inputs), " got ", x[0].shape)
 
         # membership_values = self.gaussian_layer.forward(x, self.mu, self.sigma)
         membership_values = self.activation_layer.forward(x)
-        firings = self.rule_layer(membership_values, self.t_norm)  # Firings for each rule
+        firings = self.rule_layer(membership_values, self.t_norm)+torch.tensor(1e-20)  # Firings for each rule
         # firings = members, reduction="batchmean"hip_values.prod(dim=2)  # This is a quick way for clustered rules
-        summed_firings = torch.sum(firings, dim=1).reshape(batch_size, 1) + 0.0000001
-        firings = torch.div(firings, summed_firings)  # + self.firing_biases
-        output = []
+        # summed_firings = torch.sum(firings, dim=1).unsqueeze(1)+torch.finfo(torch.float64).eps
+        # firings = torch.div(firings, summed_firings)  # + self.firing_biases
 
+        output = []
         # for batch_index in range(batch_size):
         #     # An example in the batch is a 1d tensor. In order to be able to multiply it with rule_params in an
         #     # element-wise fashion, needs to be expanded to a 3d tensor
@@ -328,21 +375,28 @@ class FuzzyLayer(nn.Module):
         #     defuzzified = torch.sum(fired_batch_output, dim=1) / self.n_rules
         #     output.append(defuzzified)
 
+        conseqs = torch.matmul(x, self.rho[:, :, :-1].transpose(2, 1)).transpose(1,0) + self.rho[:,:,self.n_inputs]
+        conseqs = conseqs * (firings / firings.sum(1, True)).unsqueeze(1)
+        conseqs = conseqs.sum(dim=2)
+        return conseqs
+
+        '''
         for batch_index in range(batch_size):
             # An example in the batch is a 1d tensor. In order to be able to multiply it with rule_params in an
             # element-wise fashion, needs to be expanded to a 3d tensor
             sample = x[batch_index]
-
+            #firings[batch_index] = firings[batch_index]/firings[batch_index].sum()
             rule_outputs = torch.matmul(sample, self.rho[:, :, :-1].transpose(2, 1)) + self.rho[:, :,
                                                                                        self.n_inputs]  # rho has a shape of (n_outputs, n_rules, n_inputs)
             batch_firings = firings[batch_index].expand(self.n_outputs, -1)  # Expand it for number of outputs
-            fired_batch_output = rule_outputs * batch_firings
+            fired_batch_output = rule_outputs
 
             # Defuzzify
             defuzzified = torch.sum(fired_batch_output, dim=1)
             output.append(defuzzified)
 
         return torch.stack(output)
+    '''
 
     def draw(self, input_index):
         """
