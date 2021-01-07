@@ -5,6 +5,8 @@ from sklearn.decomposition import PCA
 from Networks.FuzzyLayer import FuzzyLayer
 import matplotlib.pyplot as plt
 import enum
+import numpy as np
+from sklearn.preprocessing import StandardScaler
 
 class TeacherLite(nn.Module):
     def __init__(self, n_class):
@@ -64,8 +66,12 @@ class Student(nn.Module):
         self.n_inputs = n_inputs
         self.n_memberships = n_memberships
         self.n_outputs = n_outputs
+
+        # PCA and Data params
         self.pca = PCA(64)
-        self.fuzzy_layer = FuzzyLayer(n_memberships=n_memberships, n_inputs=64, n_outputs=10, learnable_memberships=learnable_memberships)
+        self.evecs = None
+        self.trainMean = None
+        self.fuzzy_layer = FuzzyLayer(n_memberships=n_memberships, n_inputs=n_inputs, n_outputs=10, learnable_memberships=learnable_memberships)
         # These values will be set at each pca fit
         self.data_min = 0
         self.data_max = 0
@@ -74,9 +80,10 @@ class Student(nn.Module):
         device = x.device
         # Normalize batch using min and max
         #x = (x-self.data_min)/(self.data_max-self.data_min)
-        x = self.pca.transform(x.view(x.shape[0], -1).detach().cpu().numpy())
-        x = (x-self.data_min)/(self.data_max-self.data_min)
-        x = self.fuzzy_layer.forward(torch.tensor(x).to(device).float())
+        #x = self.pca.transform(x.view(x.shape[0], -1).detach().cpu().numpy())
+        #x = (x-self.data_min)/(self.data_max-self.data_min)
+        #x = self.fuzzy_layer.forward(torch.tensor(x).to(device).float())
+        x = self.fuzzy_layer.forward(self.preprocess_data(x))
         return x
 
     def initialize(self, init_data: torch.Tensor, init_labels, load_params=True, filename=None):
@@ -91,28 +98,43 @@ class Student(nn.Module):
         to the file with the given name
         :return:
         '''
-        self.fit_pca(init_data)  # 1
-        flattened = init_data.view(init_data.shape[0], -1)
-        fitted = self.pca.transform(flattened.numpy())
+
+        fitted = self.fit_pca(init_data, init_labels)  # 1
         self.data_max = fitted.max()
         self.data_min = fitted.min()
         # 2) Initialize the weights of the fuzzy layer using c-means
-        print("Activating Fuzzy")
-        fitted = fitted = self.feature_extraction(init_data)
+
         if load_params and filename is not None:
             self.fuzzy_layer.activation_layer.load_parameters(filename)
         else:
             self.fuzzy_layer.activation_layer.initialize_gaussians(fitted, init_labels, filename)  # 2
 
-    def fit_pca(self, init_data:torch.Tensor):
-        self.pca = PCA(64, svd_solver='randomized',
-          whiten=True)
+    def fit_pca(self, init_data:torch.Tensor, init_labels):
+
+        # Standardize matrix
         flattened = torch.flatten(init_data, start_dim=1)
-        self.pca.fit(flattened.detach().cpu().numpy())
+        self.trainMean = flattened.T.mean(1, True)
+
+        data = flattened.T - self.trainMean
+        data = data.T
+        covmat = np.cov(data.T)  # Don't use all the data
+        evals, evecs = torch.eig(torch.tensor(covmat).float(), eigenvectors=True)
+        self.evecs = evecs[:,:5]
+        # evecs are columns vectors. So the ith eig vector is evecs[:,i]
+        reduced = self.feature_extraction(data)
+        return reduced
+
+    def preprocess_data(self, data):
+        if self.trainMean is None:
+            raise("Initialize the Network first")
+
+        flat = torch.flatten(data, start_dim=1)
+        flat = flat.T - self.trainMean.to(data.device)
+        reduced = self.feature_extraction(flat.T)
+        return reduced
 
     def feature_extraction(self, data):
-        x = self.pca.transform(data.view(data.shape[0], -1).detach().cpu().numpy())
-        return self.min_max_normalization(x)
+        return torch.matmul(data, self.evecs.to(data.device))
 
     def min_max_normalization(self, data):
         return (data-self.data_min)/(self.data_max-self.data_min)

@@ -166,9 +166,6 @@ class GaussianLayer(nn.Module):
                 self.sigma.requires_grad = False
                 self.mu.requires_grad = False
 
-
-
-
     def update_membs_with_kmeans(self, TrainData=None, TrainLabels=None):
         if TrainData is not None and TrainLabels is not None:
             # KMeans Based Init #  TODO: Below code is from Derek Anderson, remove it after usage
