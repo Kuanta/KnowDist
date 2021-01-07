@@ -58,7 +58,7 @@ def train_student(train_set, val_set, teacher, params):
     train_opts.save_model = False
     train_opts.verbose_freq = 100
     train_opts.weight_decay = 0
-    train_opts.shuffle_data = False
+    train_opts.shuffle_data =True
     # Define loss
     dist_loss = DistillationLoss(STUDENT_TEMP, TEACHER_TEMP, ALPHA)
 
@@ -68,9 +68,9 @@ def train_student(train_set, val_set, teacher, params):
     init_data, init_labels = train_set.get_batch(-1, 0, "cpu")
     student.initialize(init_data, init_labels, load_params=True, filename="clusters7")
     print("Done Initializing Student")
-    #student.fuzzy_layer.draw(1)
-    #plt.plot(student.feature_extraction(init_data)[:,1:2], np.zeros(init_data.shape[0]), 'o')
-    #plt.show()
+    student.fuzzy_layer.draw(1)
+    plt.plot(student.feature_extraction(init_data)[:,1:2], np.zeros(init_data.shape[0]), 'o')
+    plt.show()
     student.to("cuda:0")
     # Define distillation network
     dist_net = DistillNet(student, teacher)
@@ -97,7 +97,7 @@ if __name__ == "__main__":
     parser.add_argument("--exp_no", default=1, type=int)
     parser.add_argument("--student_temp", default=1, type=float)
     parser.add_argument("--teacher_temp", default=5, type=float)
-    parser.add_argument("--alpha", type=float, default=0.25, help="Alpha variable in the loss. 1 means full KL")
+    parser.add_argument("--alpha", type=float, default=0, help="Alpha variable in the loss. 1 means full KL")
     parser.add_argument("--n_rules", type=int, default=7, help="Number of memberships")
     parser.add_argument("--learn_ants", type=bool, default=True, help="If set to true, membership funcitons won't be learned")
     parser.add_argument("--n_epochs", type=int, default=100)

@@ -42,13 +42,14 @@ class GaussianLayer(nn.Module):
     Defines a layer for gaussian membership functions
     """
 
-    def __init__(self, n_memberships, n_inputs, device, n_outputs=1, trainable=False):
+    def __init__(self, n_memberships, n_inputs, device, n_outputs=1, trainable=False, height=1):
         super(GaussianLayer, self).__init__()
         self.n_memberships = n_memberships
         self.n_inputs = n_inputs
         self.n_outputs = n_outputs
         self.trainable = trainable
         self.device = device
+        self.height = 1
         self.initialize_gaussians()
 
     def forward(self, x):
@@ -61,7 +62,7 @@ class GaussianLayer(nn.Module):
         batch = torch.mul(batch, batch)
         batch = batch / 2
         batch = torch.exp(-1 * batch)
-        batch = batch+0.01  # 0's shut downs the firing rates
+        batch = batch*self.height  # 0's shut downs the firing rates
         return batch
 
     def initialize_gaussians(self, TrainData=None, TrainLabels=None, params_filepath=None):
@@ -89,29 +90,36 @@ class GaussianLayer(nn.Module):
                 self.mu.requires_grad = False
 
     def update_membs_with_fcm(self, TrainData, params_filepath):
-        # centers, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(
-        #     TrainData.transpose(), self.n_memberships, 30, error=0.001, maxiter=500, init=None, seed=42)
-        data = TrainData.transpose(1, 0)
-        centers = []
-        sigmas = []
-        for i in range(data.shape[0]):
-            print("Calculating centers for the {}th axis".format(i))
-            center, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(
-                np.expand_dims(data[i], 0), self.n_memberships, 1.5, error=0.001, maxiter=500,
-                init=None)
-            # Calculate standard deviations
-            diffs = np.expand_dims(data[i], 1) - center.squeeze(1)
-            squared = np.square(diffs)
-            membs = -2 * np.log(u.transpose())+torch.finfo(torch.float64).eps
-            _sigma = np.sqrt(squared / membs)
-            N = _sigma.shape[0]
-            _sigma = np.sum(_sigma, 0, keepdims=True)
-            _sigma = _sigma / N
+        centers, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(
+            TrainData.transpose(), self.n_memberships, 30, error=0.001, maxiter=500, init=None, seed=42)
 
-            centers.append(center)
-            sigmas.append(_sigma)
-        centers = np.array(centers).squeeze(-1).T
-        sigmas = np.array(sigmas).squeeze(1).T
+        diffs = np.expand_dims(TrainData, 1)-centers
+        squared = np.square(diffs)
+        membs = -2 * np.log(u.transpose())+torch.finfo(torch.float64).eps
+        sigmas = np.sqrt(squared/np.expand_dims(membs,2))
+        sigmas = np.sum(sigmas, axis=0, keepdims=True).squeeze(0) / TrainData.shape[0]
+
+        # data = TrainData.transpose(1, 0)
+        # centers = []
+        # sigmas = []
+        # for i in range(data.shape[0]):
+        #     print("Calculating centers for the {}th axis".format(i))
+        #     center, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(
+        #         np.expand_dims(data[i], 0), self.n_memberships, 1.5, error=0.001, maxiter=500,
+        #         init=None)
+        #     # Calculate standard deviations
+        #     diffs = np.expand_dims(data[i], 1) - center.squeeze(1)
+        #     squared = np.square(diffs)
+        #     membs = -2 * np.log(u.transpose())+torch.finfo(torch.float64).eps
+        #     _sigma = np.sqrt(squared / membs)
+        #     N = _sigma.shape[0]
+        #     _sigma = np.sum(_sigma, 0, keepdims=True)
+        #     _sigma = _sigma / N
+        #
+        #     centers.append(center)
+        #     sigmas.append(_sigma)
+        # centers = np.array(centers).squeeze(-1).T
+        # sigmas = np.array(sigmas).squeeze(1).T
 
         self.mu = nn.Parameter(torch.tensor(centers).float().to(self.device))
         self.sigma = nn.Parameter(torch.tensor(sigmas).float().to(self.device))
@@ -145,7 +153,9 @@ class GaussianLayer(nn.Module):
         with open(filename, "r") as f:
             data = json.load(f)
             #sigma = torch.ones(size=(self.n_memberships, self.n_inputs)).float().to(self.device)*sigma
-            self.sigma = nn.Parameter(torch.from_numpy(np.array(data["sigma"]).squeeze(1).T).float()*2)
+            sigma = np.array(data["sigma"]).squeeze(1).T
+            sigma[:, 0] = sigma[:,0]
+            self.sigma = nn.Parameter(torch.from_numpy(sigma).float()*2.5)
             # sigma = torch.rand(size=(self.n_memberships, self.n_inputs)).float().to(self.device)*2
             # self.sigma = nn.Parameter(sigma)
             self.mu = nn.Parameter(torch.from_numpy(np.array(data["mu"])).float())
@@ -358,6 +368,7 @@ class FuzzyLayer(nn.Module):
         # membership_values = self.gaussian_layer.forward(x, self.mu, self.sigma)
         membership_values = self.activation_layer.forward(x)
         firings = self.rule_layer(membership_values, self.t_norm)+torch.tensor(1e-20)  # Firings for each rule
+        normalizedFirings = (firings / firings.sum(1, True)).unsqueeze(1)
         # firings = members, reduction="batchmean"hip_values.prod(dim=2)  # This is a quick way for clustered rules
         # summed_firings = torch.sum(firings, dim=1).unsqueeze(1)+torch.finfo(torch.float64).eps
         # firings = torch.div(firings, summed_firings)  # + self.firing_biases
@@ -376,7 +387,7 @@ class FuzzyLayer(nn.Module):
         #     output.append(defuzzified)
 
         conseqs = torch.matmul(x, self.rho[:, :, :-1].transpose(2, 1)).transpose(1,0) + self.rho[:,:,self.n_inputs]
-        conseqs = conseqs * (firings / firings.sum(1, True)).unsqueeze(1)
+        conseqs = conseqs   # Multiply with normalized firings
         conseqs = conseqs.sum(dim=2)
         return conseqs
 

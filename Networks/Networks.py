@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from sklearn.decomposition import PCA
 from Networks.FuzzyLayer import FuzzyLayer
 import matplotlib.pyplot as plt
+import enum
 
 class TeacherLite(nn.Module):
     def __init__(self, n_class):
@@ -97,7 +98,7 @@ class Student(nn.Module):
         self.data_min = fitted.min()
         # 2) Initialize the weights of the fuzzy layer using c-means
         print("Activating Fuzzy")
-        fitted = self.min_max_normalization(fitted)
+        fitted = fitted = self.feature_extraction(init_data)
         if load_params and filename is not None:
             self.fuzzy_layer.activation_layer.load_parameters(filename)
         else:
@@ -110,11 +111,12 @@ class Student(nn.Module):
         self.pca.fit(flattened.detach().cpu().numpy())
 
     def feature_extraction(self, data):
-        x =  self.pca.transform(data.view(data.shape[0], -1).detach().cpu().numpy())
+        x = self.pca.transform(data.view(data.shape[0], -1).detach().cpu().numpy())
         return self.min_max_normalization(x)
 
     def min_max_normalization(self, data):
         return (data-self.data_min)/(self.data_max-self.data_min)
+
 class DistillNet(nn.Module):
     def __init__(self, student, teacher):
         super(DistillNet, self).__init__()
