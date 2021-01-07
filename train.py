@@ -62,11 +62,12 @@ def train_student(train_set, val_set, teacher, params):
     # Define loss
     dist_loss = DistillationLoss(STUDENT_TEMP, TEACHER_TEMP, ALPHA)
 
-    student = Student(n_memberships=N_RULES, n_inputs=64, n_outputs=10, learnable_memberships=params.learn_ants)
+    student = Student(n_memberships=N_RULES, n_inputs=5, n_outputs=10, learnable_memberships=params.learn_ants)
     # Initialzie student
     print("Initializing Student")
-    init_data, init_labels = train_set.get_batch(-1, 0, "cpu")
-    student.initialize(init_data, init_labels, load_params=True, filename="clusters7")
+    train_set.shuffle_data()
+    init_data, init_labels = train_set.get_batch(60000, 0, "cpu")
+    student.initialize(init_data, init_labels, load_params=False, filename="clusters7")
     print("Done Initializing Student")
     #student.fuzzy_layer.draw(1)
     #plt.plot(student.feature_extraction(init_data)[:,1:2], np.zeros(init_data.shape[0]), 'o')

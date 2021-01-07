@@ -89,32 +89,40 @@ class GaussianLayer(nn.Module):
                 self.mu.requires_grad = False
 
     def update_membs_with_fcm(self, TrainData, params_filepath):
-        # centers, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(
-        #     TrainData.transpose(), self.n_memberships, 30, error=0.001, maxiter=500, init=None, seed=42)
-        data = TrainData.transpose(1, 0)
-        centers = []
-        sigmas = []
-        for i in range(data.shape[0]):
-            print("Calculating centers for the {}th axis".format(i))
-            center, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(
-                np.expand_dims(data[i], 0), self.n_memberships, 1.5, error=0.001, maxiter=500,
-                init=None)
-            # Calculate standard deviations
-            diffs = np.expand_dims(data[i], 1) - center.squeeze(1)
-            squared = np.square(diffs)
-            membs = -2 * np.log(u.transpose())+torch.finfo(torch.float64).eps
-            _sigma = np.sqrt(squared / membs)
-            N = _sigma.shape[0]
-            _sigma = np.sum(_sigma, 0, keepdims=True)
-            _sigma = _sigma / N
+        centers, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(
+            TrainData.T, 7, 1.8, error=0.001, maxiter=500, init=None, seed=42)
+        diffs = np.expand_dims(TrainData, 1) - centers
+        squared = np.square(diffs)
+        membs = -2 * np.log(u.transpose()) + torch.finfo(torch.float64).eps
+        sigma = np.sqrt(squared / np.expand_dims(membs,2))
+        N = sigma.shape[0]
+        sigma = np.sum(sigma, 0, keepdims=True)
+        sigma = (sigma / N).squeeze(0)
 
-            centers.append(center)
-            sigmas.append(_sigma)
-        centers = np.array(centers).squeeze(-1).T
-        sigmas = np.array(sigmas).squeeze(1).T
+        # data = TrainData.transpose(1, 0)
+        # centers = []
+        # sigmas = []
+        # for i in range(data.shape[0]):
+        #     print("Calculating centers for the {}th axis".format(i))
+        #     center, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(
+        #         np.expand_dims(data[i], 0), self.n_memberships, 1.5, error=0.001, maxiter=500,
+        #         init=None)
+        #     # Calculate standard deviations
+        #     diffs = np.expand_dims(data[i], 1) - center.squeeze(1)
+        #     squared = np.square(diffs)
+        #     membs = -2 * np.log(u.transpose())+torch.finfo(torch.float64).eps
+        #     _sigma = np.sqrt(squared / membs)
+        #     N = _sigma.shape[0]
+        #     _sigma = np.sum(_sigma, 0, keepdims=True)
+        #     _sigma = _sigma / N
+        #
+        #     centers.append(center)
+        #     sigmas.append(_sigma)
+        # centers = np.array(centers).squeeze(-1).T
+        # sigmas = np.array(sigmas).squeeze(1).T
 
         self.mu = nn.Parameter(torch.tensor(centers).float().to(self.device))
-        self.sigma = nn.Parameter(torch.tensor(sigmas).float().to(self.device))
+        self.sigma = nn.Parameter(torch.tensor(sigma).float().to(self.device))
         #sigma = torch.rand(size=(self.n_memberships, self.n_inputs)).float().to(self.device)
         #self.sigma = nn.Parameter(self.sigma.float())
         #self.sigma = nn.Parameter(sigma)
@@ -155,9 +163,6 @@ class GaussianLayer(nn.Module):
             else:
                 self.sigma.requires_grad = False
                 self.mu.requires_grad = False
-
-
-
 
     def update_membs_with_kmeans(self, TrainData=None, TrainLabels=None):
         if TrainData is not None and TrainLabels is not None:
