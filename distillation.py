@@ -24,11 +24,17 @@ class DistillationLoss:
         student_logits = logits[0]
         teacher_logits = logits[1]
         hard_student_probs = F.softmax(student_logits, dim=1)
-        soft_student_probs = F.softmax(student_logits/self.student_temp, dim=1)
+        hard_teacher_probs = F.softmax(teacher_logits, dim=1)
+
+        soft_student_probs = F.log_softmax(student_logits/self.student_temp, dim=1)
         soft_teacher_probs = F.softmax(teacher_logits/self.teacher_temp, dim=1)
+
+        # soft_student_probs = F.softmax(hard_student_probs / self.student_temp, dim=1)
+        # soft_teacher_probs = F.softmax(hard_teacher_probs / self.teacher_temp, dim=1)
 
         # Cross-Entropy loss
         cross_loss = F.cross_entropy(hard_student_probs, labels)
+        #kl_loss = -(soft_student_probs*soft_teacher_probs).sum(dim=1).mean()
         kl_loss = self.kl_loss(soft_student_probs, soft_teacher_probs)
         loss = (1-self.alpha)*cross_loss + self.alpha*self.student_temp*self.teacher_temp*kl_loss
         return loss

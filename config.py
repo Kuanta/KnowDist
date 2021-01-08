@@ -3,4 +3,4 @@ TRAIN_TEACHER = False
 TEST = False
 COMPARE = False
 DATASET = "Mnist"
-TEACHER_MODEL_PATH = "./models/teacher_lite"
+TEACHER_MODEL_PATH = "./models/teacher"

@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from sklearn.decomposition import PCA
 from Networks.FuzzyLayer import FuzzyLayer
+from Networks.T2FuzzyLayer import T2FuzzyLayer
 import matplotlib.pyplot as plt
 import enum
 import numpy as np
@@ -28,6 +29,7 @@ class TeacherLite(nn.Module):
         x = self.conv_layers(x)
         x = x.view(x.shape[0], -1)
         x = self.fc1(x)
+        x = F.relu(x)
         x = self.fc2(x)
         return x
 
@@ -61,28 +63,30 @@ class Teacher(nn.Module):
         return x
 
 class Student(nn.Module):
-    def __init__(self, n_inputs, n_memberships, n_outputs, learnable_memberships=True):
+    def __init__(self, n_inputs, n_memberships, n_outputs, learnable_memberships=True, fuzzy_type=1):
         super(Student, self).__init__()
         self.n_inputs = n_inputs
         self.n_memberships = n_memberships
         self.n_outputs = n_outputs
 
         # PCA and Data params
-        self.pca = PCA(64)
-        self.evecs = None
-        self.trainMean = None
-        self.fuzzy_layer = FuzzyLayer(n_memberships=n_memberships, n_inputs=n_inputs, n_outputs=10, learnable_memberships=learnable_memberships)
+        self.evecs = nn.Parameter(torch.empty((784, n_inputs)))  # TODO: Don't hardcode 784
+        self.evecs.requires_grad = False
+        self.trainMean = nn.Parameter(torch.empty((784, 1)))
+        self.trainMean.requires_grad = False
+        self.trainVar = nn.Parameter(torch.empty((784)))
+        self.trainMean.requires_grad = False
+
+        if fuzzy_type == 1:
+            self.fuzzy_layer = FuzzyLayer(n_memberships=n_memberships, n_inputs=n_inputs, n_outputs=10, learnable_memberships=learnable_memberships)
+        else:
+            self.fuzzy_layer = T2FuzzyLayer(n_memberships=n_memberships, n_inputs=n_inputs, n_outputs=n_outputs)
+
         # These values will be set at each pca fit
         self.data_min = 0
         self.data_max = 0
 
     def forward(self, x):
-        device = x.device
-        # Normalize batch using min and max
-        #x = (x-self.data_min)/(self.data_max-self.data_min)
-        #x = self.pca.transform(x.view(x.shape[0], -1).detach().cpu().numpy())
-        #x = (x-self.data_min)/(self.data_max-self.data_min)
-        #x = self.fuzzy_layer.forward(torch.tensor(x).to(device).float())
         x = self.fuzzy_layer.forward(self.preprocess_data(x))
         return x
 
@@ -102,30 +106,33 @@ class Student(nn.Module):
         fitted = self.fit_pca(init_data, init_labels)  # 1
         self.data_max = fitted.max()
         self.data_min = fitted.min()
-        # 2) Initialize the weights of the fuzzy layer using c-means
 
         if load_params and filename is not None:
             self.fuzzy_layer.activation_layer.load_parameters(filename)
         else:
-            self.fuzzy_layer.activation_layer.initialize_gaussians(fitted, init_labels, filename)  # 2
+            self.fuzzy_layer.activation_layer.initialize_gaussians(fitted, init_labels, filename)
 
     def fit_pca(self, init_data:torch.Tensor, init_labels):
 
         # Standardize matrix
         flattened = torch.flatten(init_data, start_dim=1)
-        self.trainMean = flattened.T.mean(1, True)
+        self.trainMean = nn.Parameter(flattened.T.mean(1, True))
+        self.trainVar = nn.Parameter(flattened.T.var(1, True))
+        self.trainMean.requires_grad = False
+
 
         data = flattened.T - self.trainMean
         data = data.T
         covmat = np.cov(data.T)  # Don't use all the data
         evals, evecs = torch.eig(torch.tensor(covmat).float(), eigenvectors=True)
-        self.evecs = evecs[:,:5]
+        self.evecs = nn.Parameter(evecs[:, :self.n_inputs])  # Set eigen vectors as parameter so that it can be loaded in future
+        self.evecs.requires_grad = False
         # evecs are columns vectors. So the ith eig vector is evecs[:,i]
         reduced = self.feature_extraction(data)
         return reduced
 
     def preprocess_data(self, data):
-        if self.trainMean is None:
+        if self.trainMean is None or self.evecs is None:
             raise("Initialize the Network first")
 
         flat = torch.flatten(data, start_dim=1)

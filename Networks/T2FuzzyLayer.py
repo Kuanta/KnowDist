@@ -1,15 +1,4 @@
-import torch
-import torch.nn as nn
 from Networks.FuzzyLayer import *
-
-from enum import Enum
-import numpy as np
-import itertools
-import matplotlib.pyplot as plt
-from sklearn.cluster import KMeans
-import skfuzzy as fuzz
-import json
-
 
 class T2FuzzyLayer(nn.Module):
     """
@@ -22,7 +11,7 @@ class T2FuzzyLayer(nn.Module):
        """
 
     # TODO: clustering variable is pointless at this point since creating  every possible is not possible at the moment
-    def __init__(self, n_memberships, n_inputs, n_outputs=1, fou_height=0.5, clustering=True, use_gpu=True,
+    def __init__(self, n_memberships, n_inputs, n_outputs=1, clustering=True, use_gpu=True,
                  learnable_memberships=True, n_random_rules=0, t_norm=TNormType.Product):
 
         super(T2FuzzyLayer, self).__init__()
@@ -35,15 +24,12 @@ class T2FuzzyLayer(nn.Module):
         # There can be duplicate entries in rule_masks when generating. To be able to load the saved model,
         # unique number of rules must be saved by setting it as a non-learnable parameter
         self.t_norm = t_norm
-        self.fou_height = fou_height
+        self.fou_height = nn.Parameter(torch.rand((self.n_memberships, self.n_inputs), dtype=torch.float))
 
         device = torch.device("cuda:0" if torch.cuda.is_available() and use_gpu else "cpu")
 
-        self.upper_activation_layer = GaussianLayer(n_memberships=self.n_memberships, n_inputs=self.n_inputs, device=device,
-                                              n_outputs=self.n_outputs, trainable=learnable_memberships, height=fou_height)
-
-        self.lower_activation_layer = GaussianLayer(n_memberships=self.n_memberships, n_inputs=self.n_inputs, device=device,
-                                              n_outputs=self.n_outputs, trainable=learnable_memberships, height=fou_height)
+        self.activation_layer = GaussianLayer(n_memberships=self.n_memberships, n_inputs=self.n_inputs, device=device,
+                                              n_outputs=self.n_outputs, trainable=learnable_memberships)
 
         pre_rule_masks = None  # If this is None, rule_layer will create rule masks (random+same indexed rules)
         self.rule_layer = FuzzyRules(n_memberships=self.n_memberships, n_inputs=self.n_inputs,
@@ -57,31 +43,28 @@ class T2FuzzyLayer(nn.Module):
         self.rho.requires_grad = True
 
     def initialize_activation_layers(self, TrainData, TrainLabels=None, params_filepath=None):
-        self.upper_activation_layer.initialize_gaussians(TrainData, TrainLabels, params_filepath)
-        # Sigma and mean values of activation layers should be the same
-        self.lower_activation_layer.sigma = self.upper_activation_layer.sigma
-        self.lower_activation_layer.mu = self.lower_activation_layer
+        self.activation_layer.initialize_gaussians(TrainData, TrainLabels, params_filepath)
 
     def forward(self, x):
         batch_size = x.shape[0]
         if x.shape != (batch_size, self.n_inputs):
             raise Exception("Expected input shape of ", (1, self.n_inputs), " got ", x[0].shape)
 
-        upper_membs = self.upper_activation_layer.forward(x)
-        lower_membs = self.lower_activation_layer.forward(x)
+        upper_membs = self.activation_layer.forward(x)
+        lower_membs = upper_membs*torch.sigmoid(self.fou_height)
 
-        upper_firings = self.rule_layer(upper_membs, self.t_norm)
-        lower_firings = self.rule_layer(lower_membs, self.t_norm)
+        upper_firings = self.rule_layer(upper_membs, self.t_norm)+torch.tensor(1e-20)
+        lower_firings = self.rule_layer(lower_membs, self.t_norm)+torch.tensor(1e-20)
 
         upper_conseqs = torch.matmul(x, self.rho[:, :, :-1].transpose(2, 1)).transpose(1, 0) + self.rho[:, :, self.n_inputs]
-        upper_conseqs = upper_conseqs * (upper_firings / upper_firings.sum(1, True)).unsqueeze(1)
+        upper_conseqs = upper_conseqs * (upper_firings / upper_firings.sum(1, True)).unsqueeze(1)  # Multiply with normalized firings
         upper_conseqs = upper_conseqs.sum(dim=2)
 
         lower_conseqs = torch.matmul(x, self.rho[:, :, :-1].transpose(2, 1)).transpose(1, 0) + self.rho[:, :, self.n_inputs]
-        lower_conseqs = lower_conseqs * (lower_firings / lower_firings.sum(1, True)).unsqueeze(1)
+        lower_conseqs = lower_conseqs * (lower_firings / lower_firings.sum(1, True)).unsqueeze(1)  # Multiply with normalized firings
         lower_conseqs = lower_conseqs.sum(dim=2)
 
-        conseqs = 0.5*lower_conseqs + 0.5*upper_conseqs
+        conseqs = 0.5*lower_conseqs + 0.5*upper_conseqs  #TODO: Set this
         return conseqs
 
     def draw(self, input_index):

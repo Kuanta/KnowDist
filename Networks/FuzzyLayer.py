@@ -42,14 +42,13 @@ class GaussianLayer(nn.Module):
     Defines a layer for gaussian membership functions
     """
 
-    def __init__(self, n_memberships, n_inputs, device, n_outputs=1, trainable=False, height=1):
+    def __init__(self, n_memberships, n_inputs, device, n_outputs=1, trainable=False):
         super(GaussianLayer, self).__init__()
         self.n_memberships = n_memberships
         self.n_inputs = n_inputs
         self.n_outputs = n_outputs
         self.trainable = trainable
         self.device = device
-        self.height = 1
         self.initialize_gaussians()
 
     def forward(self, x):
@@ -62,7 +61,6 @@ class GaussianLayer(nn.Module):
         batch = torch.mul(batch, batch)
         batch = batch / 2
         batch = torch.exp(-1 * batch)
-        batch = batch*self.height  # 0's shut downs the firing rates
         return batch
 
     def initialize_gaussians(self, TrainData=None, TrainLabels=None, params_filepath=None):
@@ -91,7 +89,7 @@ class GaussianLayer(nn.Module):
 
     def update_membs_with_fcm(self, TrainData, params_filepath):
         centers, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(
-            TrainData.transpose(), self.n_memberships, 30, error=0.001, maxiter=500, init=None, seed=42)
+            TrainData.T, self.n_memberships, 1.5, error=0.001, maxiter=100, init=None, seed=42)
 
         diffs = np.expand_dims(TrainData, 1)-centers
         squared = np.square(diffs)
