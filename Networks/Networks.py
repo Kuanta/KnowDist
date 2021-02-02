@@ -63,7 +63,7 @@ class Teacher(nn.Module):
         return x
 
 class Student(nn.Module):
-    def __init__(self, n_inputs, n_memberships, n_outputs, learnable_memberships=True, fuzzy_type=1):
+    def __init__(self, n_inputs, n_memberships, n_outputs, learnable_memberships=True, fuzzy_type=1, use_sigma_scale=True):
         super(Student, self).__init__()
         self.n_inputs = n_inputs
         self.n_memberships = n_memberships
@@ -74,13 +74,15 @@ class Student(nn.Module):
         self.evecs.requires_grad = False
         self.trainMean = nn.Parameter(torch.empty((784, 1)))
         self.trainMean.requires_grad = False
-        self.trainVar = nn.Parameter(torch.empty((784)))
+        self.trainVar = nn.Parameter(torch.empty((784, 1)))
         self.trainMean.requires_grad = False
 
         if fuzzy_type == 1:
+            print("Fuzzy Type 1")
             self.fuzzy_layer = FuzzyLayer(n_memberships=n_memberships, n_inputs=n_inputs, n_outputs=10, learnable_memberships=learnable_memberships)
         else:
-            self.fuzzy_layer = T2FuzzyLayer(n_memberships=n_memberships, n_inputs=n_inputs, n_outputs=n_outputs)
+            print("Fuzzy Type 2")
+            self.fuzzy_layer = T2FuzzyLayer(n_memberships=n_memberships, n_inputs=n_inputs, n_outputs=n_outputs, use_sigma_scale=use_sigma_scale)
 
         # These values will be set at each pca fit
         self.data_min = 0
@@ -117,15 +119,17 @@ class Student(nn.Module):
         # Standardize matrix
         flattened = torch.flatten(init_data, start_dim=1)
         self.trainMean = nn.Parameter(flattened.T.mean(1, True))
-        self.trainVar = nn.Parameter(flattened.T.var(1, True))
+        self.trainVar = nn.Parameter(flattened.T.var(1, True).unsqueeze(1))
         self.trainMean.requires_grad = False
+        self.trainVar.requires_grad = False
 
-
-        data = flattened.T - self.trainMean
+        data = (flattened.T - self.trainMean)  # /(self.trainVar + torch.tensor(1e-20))
         data = data.T
         covmat = np.cov(data.T)  # Don't use all the data
-        evals, evecs = torch.eig(torch.tensor(covmat).float(), eigenvectors=True)
-        self.evecs = nn.Parameter(evecs[:, :self.n_inputs])  # Set eigen vectors as parameter so that it can be loaded in future
+        #Apply SVD
+        left, sigma, right = torch.svd(torch.tensor(covmat).float())
+        #evals, evecs = torch.eig(torch.tensor(covmat).float(), eigenvectors=True)
+        self.evecs = nn.Parameter(right[:, :self.n_inputs])  # Set eigen vectors as parameter so that it can be loaded in future
         self.evecs.requires_grad = False
         # evecs are columns vectors. So the ith eig vector is evecs[:,i]
         reduced = self.feature_extraction(data)
@@ -136,7 +140,7 @@ class Student(nn.Module):
             raise("Initialize the Network first")
 
         flat = torch.flatten(data, start_dim=1)
-        flat = flat.T - self.trainMean.to(data.device)
+        flat = (flat.T - self.trainMean.to(data.device))  # /(self.trainVar + torch.tensor(1e-20))
         reduced = self.feature_extraction(flat.T)
         return reduced
 

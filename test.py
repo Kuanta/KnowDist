@@ -1,7 +1,7 @@
 import numpy as np
 import config as cfg
 import torch
-from Networks.Networks import Student, TeacherLite
+from Networks.Networks import Student, TeacherLite, Teacher
 from DeepTorch.Datasets.Cifar import CifarLoader
 from DeepTorch.Datasets.MNIST import MNISTLoader
 
@@ -21,7 +21,7 @@ def test_experiment(student, test_set, exp_id, exp_no):
     student.load_state_dict(torch.load(model_path))
     test_data, test_labels = test_set.get_batch(-1, 0, "cpu")
 
-    teacher = TeacherLite(10)
+    teacher = Teacher(10)
     teacher.load_state_dict(torch.load(cfg.TEACHER_MODEL_PATH))
     teacher_acc = test_accuracy(teacher, test_data.float(), test_labels.float())
 
@@ -32,13 +32,14 @@ if __name__ == "__main__":
     import DeepTorch.Trainer as trn
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--exp_id", default=5, type=int)
+    parser.add_argument("--exp_id", default=6, type=int)
     parser.add_argument("--exp_no", default=1, type=int)
-    parser.add_argument("--fuzzy_type", default=1, type=int)
+    parser.add_argument("--fuzzy_type", default=2, type=int)
+    parser.add_argument("--use_sigma_scale", default=1, type=int)
 
     args = parser.parse_args()
 
-    student = Student(n_inputs=10, n_memberships=15, n_outputs=10, fuzzy_type=args.fuzzy_type)
+    student = Student(n_inputs=30, n_memberships=7, n_outputs=10, fuzzy_type=args.fuzzy_type, use_sigma_scale=args.use_sigma_scale)
     mLoader = MNISTLoader("./data")
     train_set = mLoader.get_training_dataset()
     test_set = mLoader.get_test_dataset()
@@ -51,7 +52,7 @@ if __name__ == "__main__":
     # root = "./models/{}/{}".format(args.exp_id, args.exp_no)
     # info_path = root + "/student_train_info"
     # info = trn.get_info(info_path, print_out=False)
-    # acc1 = info[3][-1]
+    # acc1 = info[4][-1]
     file1 = open("results.txt", "a")
     file1.write("Exp ID:{} - Exp No:{} - Acc 1:{}\n".format(args.exp_id, args.exp_no, acc1))
     file1.close()

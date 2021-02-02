@@ -6,6 +6,7 @@ from Networks.Networks import TeacherLite, Teacher, Student, DistillNet
 from distillation import DistillationLoss
 import config as cfg
 import matplotlib.pyplot as plt
+import json
 
 def validate_distillation(data, labels):
     outputs = torch.nn.functional.softmax(data[0], dim=1).cpu().data.numpy()
@@ -48,6 +49,10 @@ def train_student(train_set, val_set, teacher, params):
     ROOT = "./models/{}/{}".format(EXP_ID, EXP_NO)
     if not os.path.exists(ROOT):
         os.mkdir(ROOT)
+
+    # Save Params
+    with open(ROOT+"/params", "w") as f:
+        json.dump(vars(args), f)
     STUDENT_MODEL_PATH = ROOT + "/student"
 
     train_opts = trn.TrainingOptions()
@@ -68,17 +73,18 @@ def train_student(train_set, val_set, teacher, params):
     # Define loss
     dist_loss = DistillationLoss(STUDENT_TEMP, TEACHER_TEMP, ALPHA)
 
-    student = Student(n_memberships=N_RULES, n_inputs=params.n_inputs, n_outputs=10, learnable_memberships=params.learn_ants, fuzzy_type=args.fuzzy_type)
-    # Initialzie student
+    student = Student(n_memberships=N_RULES, n_inputs=params.n_inputs, n_outputs=10, learnable_memberships=params.learn_ants,
+                      fuzzy_type=params.fuzzy_type, use_sigma_scale=params.use_sigma_scale)
+    # Initialize student
     print("Initializing Student")
     train_set.shuffle_data()
     init_data, init_labels = train_set.get_batch(60000, 0, "cpu")
     student.initialize(init_data, init_labels, load_params=False, filename="clusters7")
     #student.load_state_dict(torch.load(STUDENT_MODEL_PATH))
     print("Done Initializing Student")
-    # student.fuzzy_layer.draw(1)
-    # plt.plot(student.feature_extraction(init_data)[:,1:2], np.zeros(init_data.shape[0]), 'o')
-    # plt.show()
+    #student.fuzzy_layer.draw(5)
+    #plt.plot(student.feature_extraction(init_data)[:,1:2], np.zeros(init_data.shape[0]), 'o')
+    #plt.show()
     student.to("cuda:0")
     # Define distillation network
     dist_net = DistillNet(student, teacher)
@@ -101,18 +107,23 @@ if __name__ == "__main__":
 
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--exp_id", default=5, type=int)
-    parser.add_argument("--exp_no", default=1, type=int)
+    parser.add_argument("--exp_id", default=6, type=int)
+    parser.add_argument("--exp_no", default=3, type=int)
     parser.add_argument("--student_temp", default=1, type=float)
-    parser.add_argument("--teacher_temp", default=2.5, type=float)
-    parser.add_argument("--alpha", type=float, default=0.5, help="Alpha variable in the loss. 1 means full KL")
-    parser.add_argument("--n_rules", type=int, default=15, help="Number of memberships")
+    parser.add_argument("--teacher_temp", default=5.0, type=float)
+    parser.add_argument("--alpha", type=float, default=0.75, help="Alpha variable in the loss. 1 means full KL")
+    parser.add_argument("--n_rules", type=int, default=7, help="Number of memberships")
     parser.add_argument("--learn_ants", type=bool, default=True, help="If set to true, membership funcitons won't be learned")
     parser.add_argument("--n_epochs", type=int, default=20)
-    parser.add_argument("--learn_drop_epochs", type=int, default=5, help="Number of epochs to train before updating learning rate")
-    parser.add_argument("--n_inputs", type=int, default=10, help="Number of inputs of fuzzy layer")
-    parser.add_argument("--fuzzy_type", type=int, default=1, help="Type of the fuzzy system (1 or 2)")
+    parser.add_argument("--learn_drop_epochs", type=int, default=10, help="Number of epochs to train before updating learning rate")
+    parser.add_argument("--n_inputs", type=int, default=30, help="Number of inputs of fuzzy layer")
+    parser.add_argument("--fuzzy_type", type=int, default=2, help="Type of the fuzzy system (1 or 2)")
+    parser.add_argument("--dataset", type=int, default=1, help="MNIST:1, CIFAR:2")
+    parser.add_argument("--use_sigma_scale", type=int, default=0)
+
     args = parser.parse_args()
+
+    print(args.use_sigma_scale)
     # Load dataset
     if cfg.DATASET == "Cifar":
         cLoader = CifarLoader(validation_partition=0.7)

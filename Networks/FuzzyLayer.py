@@ -51,8 +51,12 @@ class GaussianLayer(nn.Module):
         self.device = device
         self.initialize_gaussians()
 
-    def forward(self, x):
-        output = [self.calculate_memberships(batch, self.mu, self.sigma) for batch in x]
+    def forward(self, x, sigma_scale=None):
+        if sigma_scale is not None:
+            sigma = self.sigma*sigma_scale
+        else:
+            sigma = self.sigma
+        output = [self.calculate_memberships(batch, self.mu, sigma) for batch in x]
         return torch.stack(output)
 
     def calculate_memberships(self, batch, mu, sigma):
@@ -73,7 +77,8 @@ class GaussianLayer(nn.Module):
         :return:
         '''
         if TrainData is not None:
-            self.update_membs_with_fcm(TrainData, params_filepath)
+            #self.update_membs_with_fcm(TrainData, params_filepath)
+            self.update_membs_with_kmeans(TrainData, TrainLabels)
         else:
             self.sigma = torch.rand(size=(self.n_memberships, self.n_inputs), dtype=torch.double).to(self.device)
             self.mu = torch.rand(size=(self.n_memberships, self.n_inputs), dtype=torch.double).to(self.device)
@@ -89,7 +94,7 @@ class GaussianLayer(nn.Module):
 
     def update_membs_with_fcm(self, TrainData, params_filepath):
         centers, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(
-            TrainData.T, self.n_memberships, 1.5, error=0.001, maxiter=100, init=None, seed=42)
+            TrainData.T, self.n_memberships, 2.5, error=0.001, maxiter=500, init=None, seed=42)
 
         diffs = np.expand_dims(TrainData, 1)-centers
         squared = np.square(diffs)
@@ -178,10 +183,10 @@ class GaussianLayer(nn.Module):
             for i in range(R):
                 for j in range(A):
                     mu[i, j] = float(kmeans.cluster_centers_[i, j])
-            self.mu = torch.nn.Parameter(mu)
+            self.mu = torch.nn.Parameter(mu.float())
 
             # now, estimate the variances
-            sig = torch.ones((R, A))*1000
+            sig = torch.ones((R, A))*3
             # for r in range(R):
             #     inds = np.where(kmeans.labels_ == r)
             #     classdata = torch.squeeze(TrainData[inds, :])
@@ -194,7 +199,7 @@ class GaussianLayer(nn.Module):
             #         else:
             #             sig[r, d] = torch.std(torch.squeeze(classdata[:, d]))
             # # print('K-means sigma guess')
-            self.sigma = torch.nn.Parameter(sig)
+            self.sigma = torch.nn.Parameter(sig.float())
 
     def draw(self, input_index):
         """
@@ -205,7 +210,7 @@ class GaussianLayer(nn.Module):
         mu_values = np.transpose(mu_values, (1, 0))
         sigma_values = self.sigma.cpu().data.numpy()
         sigma_values = np.transpose(sigma_values, (1, 0))
-        x = np.linspace(0, 1, 10000)
+        x = np.linspace(-10, 10, 10000)
         for i in range(mu_values[input_index].size):
             mu_value = mu_values[input_index][i]
             sigma_value = sigma_values[input_index][i]
@@ -342,8 +347,7 @@ class FuzzyLayer(nn.Module):
 
             # Find degrees of rules
 
-            degrees = torch.min(max_values, dim=1)[0].view(-1,
-                                                           1)  # Warning Used min as t-norm operator, might change in future
+            degrees = torch.min(max_values, dim=1)[0].view(-1, 1)  # Warning Used min as t-norm operator, might change in future
             # Sort by max_values
             concated = torch.cat((degrees.float(), indices.float()), dim=1)
             _, sorted_indices = torch.sort(concated[:, 0], descending=True)
@@ -362,13 +366,13 @@ class FuzzyLayer(nn.Module):
 
         # membership_values = self.gaussian_layer.forward(x, self.mu, self.sigma)
         membership_values = self.activation_layer.forward(x)
-        firings = self.rule_layer(membership_values, self.t_norm)+torch.tensor(1e-20)  # Firings for each rule
-        normalizedFirings = (firings / firings.sum(1, True)).unsqueeze(1)
+        firings = self.rule_layer(membership_values, self.t_norm) # Firings for each rule
+        normalizedFirings = (firings / (firings.sum(1, True)+torch.tensor(1e-20))).unsqueeze(1)
         # firings = members, reduction="batchmean"hip_values.prod(dim=2)  # This is a quick way for clustered rules
         # summed_firings = torch.sum(firings, dim=1).unsqueeze(1)+torch.finfo(torch.float64).eps
         # firings = torch.div(firings, summed_firings)  # + self.firing_biases
 
-        output = []
+        # output = []
         # for batch_index in range(batch_size):
         #     # An example in the batch is a 1d tensor. In order to be able to multiply it with rule_params in an
         #     # element-wise fashion, needs to be expanded to a 3d tensor
@@ -382,7 +386,7 @@ class FuzzyLayer(nn.Module):
         #     output.append(defuzzified)
 
         conseqs = torch.matmul(x, self.rho[:, :, :-1].transpose(2, 1)).transpose(1,0) + self.rho[:,:,self.n_inputs]
-        conseqs = conseqs   # Multiply with normalized firings
+        conseqs = conseqs*normalizedFirings   # Multiply with normalized firings
         conseqs = conseqs.sum(dim=2)
         return conseqs
 
