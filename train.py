@@ -113,7 +113,7 @@ if __name__ == "__main__":
     parser.add_argument("--exp_no", default=1, type=int)
     parser.add_argument("--student_temp", default=1, type=float)
     parser.add_argument("--teacher_temp", default=2.5, type=float)
-    parser.add_argument("--alpha", type=float, default=0.75, help="Alpha variable in the loss. 1 means full KL")
+    parser.add_argument("--alpha", type=float, default=0.0, help="Alpha variable in the loss. 1 means full KL")
     parser.add_argument("--n_rules", type=int, default=15, help="Number of memberships")
     parser.add_argument("--learn_ants", type=bool, default=True, help="If set to true, membership funcitons won't be learned")
     parser.add_argument("--n_epochs", type=int, default=20)

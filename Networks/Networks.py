@@ -73,10 +73,10 @@ class CascadeStudent(nn.Module):
         if load_params and filename is not None:
             self.fuzzy_layer_1.activation_layer.load_parameters(filename)
         else:
-            self.fuzzy_layer_1.activation_layer.initialize_gaussians(fitted.detach().cpu().numpy(), init_labels, filename)
+            self.fuzzy_layer_1.activation_layer.initialize_gaussians(fitted.detach().cpu().numpy(), init_labels, filename, sigma_mag=20)
 
         mid_data = self.fuzzy_layer_1.forward(fitted)
-        self.fuzzy_layer_2.activation_layer.initialize_gaussians(mid_data.detach().cpu().numpy(), None, None)
+        self.fuzzy_layer_2.activation_layer.initialize_gaussians(mid_data.detach().cpu().numpy(), None, None, sigma_mag=3)
         print("Done Initializing")
 
     def fit_pca(self, init_data: torch.Tensor, init_labels):

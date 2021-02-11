@@ -67,7 +67,7 @@ class GaussianLayer(nn.Module):
         batch = torch.exp(-1 * batch)
         return batch
 
-    def initialize_gaussians(self, TrainData=None, TrainLabels=None, params_filepath=None):
+    def initialize_gaussians(self, TrainData=None, TrainLabels=None, params_filepath=None, sigma_mag=1):
         '''
         Initializes the mean and sigma values for the layer. If training data is specified, parameters are calculated
         using fuzzy c-means
@@ -78,7 +78,7 @@ class GaussianLayer(nn.Module):
         '''
         if TrainData is not None:
             #self.update_membs_with_fcm(TrainData, params_filepath)
-            self.update_membs_with_kmeans(TrainData, TrainLabels)
+            self.update_membs_with_kmeans(TrainData, TrainLabels, sigma_mag=sigma_mag)
         else:
             self.sigma = torch.rand(size=(self.n_memberships, self.n_inputs), dtype=torch.double).to(self.device)
             self.mu = torch.rand(size=(self.n_memberships, self.n_inputs), dtype=torch.double).to(self.device)
@@ -169,7 +169,7 @@ class GaussianLayer(nn.Module):
                 self.sigma.requires_grad = False
                 self.mu.requires_grad = False
 
-    def update_membs_with_kmeans(self, TrainData=None, TrainLabels=None):
+    def update_membs_with_kmeans(self, TrainData=None, TrainLabels=None, sigma_mag=1):
         if TrainData is not None:
             # KMeans Based Init #  TODO: Below code is from Derek Anderson, remove it after usage
             R = self.n_memberships  # our number of rules
@@ -186,7 +186,7 @@ class GaussianLayer(nn.Module):
             self.mu = torch.nn.Parameter(mu.float())
 
             # now, estimate the variances
-            sig = torch.ones((R, A))*20
+            sig = torch.ones((R, A))*sigma_mag
             # for r in range(R):
             #     inds = np.where(kmeans.labels_ == r)
             #     classdata = torch.squeeze(TrainData[inds, :])
