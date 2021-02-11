@@ -2,8 +2,9 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import DeepTorch.Trainer as trn
-from Networks.Networks import Student, DistillNet, CascadeStudent
+from Networks.Networks import Student, DistillNet, StudentEncoder
 from Networks.Teachers import TeacherCifar, TeacherMNIST, create_teacher
+from Networks.Encoders import CifarEncoder
 from distillation import DistillationLoss
 import config as cfg
 import matplotlib.pyplot as plt
@@ -35,6 +36,71 @@ def train_teacher(train_set, val_set, teacher, train_opts, teacher_model_path):
     trainer = trn.Trainer(teacher, train_opts)
     trainer.train(torch.nn.CrossEntropyLoss(), train_set, val_set, is_classification=True)
     return teacher
+
+def train_student_encoded(train_set, val_set, teacher, params):
+    EXP_NO = params.exp_no
+    EXP_ID = params.exp_id
+    STUDENT_TEMP = params.student_temp
+    TEACHER_TEMP = params.teacher_temp
+    ALPHA = params.alpha
+    N_RULES = params.n_rules
+
+    ROOT = "./models/{}".format(EXP_ID)
+    if not os.path.exists(ROOT):
+        os.mkdir(ROOT)
+    ROOT = "./models/{}/{}".format(EXP_ID, EXP_NO)
+    if not os.path.exists(ROOT):
+        os.mkdir(ROOT)
+
+    # Save Params
+    with open(ROOT + "/params", "w") as f:
+        json.dump(vars(args), f)
+    STUDENT_MODEL_PATH = ROOT + "/student"
+
+    train_opts = trn.TrainingOptions()
+    train_opts.optimizer_type = trn.OptimizerType.Adam
+    train_opts.learning_rate = 0.01
+    train_opts.learning_rate_drop_type = trn.SchedulerType.StepLr
+    train_opts.learning_rate_update_by_step = False  # Update at every epoch
+    train_opts.learning_rate_drop_factor = 0.5  # Halve the learning rate
+    train_opts.learning_rate_drop_step_count = params.learn_drop_epochs
+    train_opts.batch_size = 128
+    train_opts.n_epochs = params.n_epochs
+    train_opts.use_gpu = True
+    train_opts.custom_validation_func = validate_distillation
+    train_opts.save_model = False
+    train_opts.verbose_freq = 100
+    train_opts.weight_decay = 1e-8
+    train_opts.shuffle_data = True
+    train_opts.regularization_method = None
+    # Define loss
+    dist_loss = DistillationLoss(STUDENT_TEMP, TEACHER_TEMP, ALPHA)
+
+    encoder = CifarEncoder(n_dims=params.n_inputs)
+    encoder.load_state_dict(torch.load("Networks/cifar_encoder"))
+    student = StudentEncoder(n_memberships=N_RULES, n_inputs=params.n_inputs, n_outputs=10,
+                      learnable_memberships=params.learn_ants,encoder=encoder,
+                      fuzzy_type=params.fuzzy_type, use_sigma_scale=params.use_sigma_scale,
+                      use_height_scale=params.use_height_scale)
+    # Initialize student
+    print("Initializing Student")
+    train_set.shuffle_data()
+    init_data, init_labels = train_set.get_batch(60000, 0, "cpu")
+    student.initialize(init_data)
+    # student.load_state_dict(torch.load(STUDENT_MODEL_PATH))
+    print("Done Initializing Student")
+    # student.fuzzy_layer.draw(5)
+    # plt.plot(student.feature_extraction(init_data)[:,1:2], np.zeros(init_data.shape[0]), 'o')
+    # plt.show()
+    student.to("cuda:0")
+    # Define distillation network
+    dist_net = DistillNet(student, teacher)
+    trainer = trn.Trainer(dist_net, train_opts)
+    results = trainer.train(dist_loss, train_set, val_set, is_classification=True)
+    torch.save(student.state_dict(), STUDENT_MODEL_PATH)
+    trn.save_train_info(results, STUDENT_MODEL_PATH + "_train_info")
+
+    return student
 
 def train_student(train_set, val_set, teacher, params):
     EXP_NO = params.exp_no
@@ -75,7 +141,7 @@ def train_student(train_set, val_set, teacher, params):
     # Define loss
     dist_loss = DistillationLoss(STUDENT_TEMP, TEACHER_TEMP, ALPHA)
 
-    student = CascadeStudent(n_memberships=N_RULES, n_inputs=params.n_inputs, n_outputs=10, learnable_memberships=params.learn_ants,
+    student = Student(n_memberships=N_RULES, n_inputs=params.n_inputs, n_outputs=10, learnable_memberships=params.learn_ants,
                       fuzzy_type=params.fuzzy_type, use_sigma_scale=params.use_sigma_scale, use_height_scale=params.use_height_scale)
     # Initialize student
     print("Initializing Student")
@@ -99,7 +165,7 @@ def train_student(train_set, val_set, teacher, params):
 
 def run_experiments(train_set, val_set, teacher, param):
     print("Running experiment ID:{} No:{}".format(param.exp_id, param.exp_no))
-    train_student(train_set, val_set, teacher, param)
+    train_student_encoded(train_set, val_set, teacher, param)
 
 if __name__ == "__main__":
     import os
@@ -119,7 +185,7 @@ if __name__ == "__main__":
     parser.add_argument("--n_epochs", type=int, default=20)
     parser.add_argument("--learn_drop_epochs", type=int, default=5, help="Number of epochs to train before updating learning rate")
     parser.add_argument("--n_inputs", type=int, default=100, help="Number of inputs of fuzzy layer")
-    parser.add_argument("--fuzzy_type", type=int, default=2, help="Type of the fuzzy system (1 or 2)")
+    parser.add_argument("--fuzzy_type", type=int, default=1, help="Type of the fuzzy system (1 or 2)")
     parser.add_argument("--dataset", type=int, default=2, help="MNIST:1, CIFAR:2")
     parser.add_argument("--use_sigma_scale", default=1, type=int)
     parser.add_argument("--use_height_scale", default=1, type=int)

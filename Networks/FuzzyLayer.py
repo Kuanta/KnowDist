@@ -78,7 +78,7 @@ class GaussianLayer(nn.Module):
         '''
         if TrainData is not None:
             #self.update_membs_with_fcm(TrainData, params_filepath)
-            self.update_membs_with_kmeans(TrainData, TrainLabels, sigma_mag=sigma_mag)
+            self.update_membs_with_kmeans(TrainData.detach().cpu().numpy(), TrainLabels, sigma_mag=sigma_mag)
         else:
             self.sigma = torch.rand(size=(self.n_memberships, self.n_inputs), dtype=torch.double).to(self.device)
             self.mu = torch.rand(size=(self.n_memberships, self.n_inputs), dtype=torch.double).to(self.device)
