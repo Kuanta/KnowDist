@@ -28,5 +28,8 @@ Exp ID:5 - Exp No:3 - Acc 1:95.14
 Exp ID:5 - Exp No:4 - Acc 1:95.41
 Exp ID:5 - Exp No:5 - Acc 1:95.37
 
+Exp ID:6 - Exp No:5 - Acc 1:96.26000000000001
+Exp ID:6 - Exp No:4 - Acc 1:96.26000000000001
+Exp ID:6 - Exp No:3 - Acc 1:96.26000000000001
 Exp ID:6 - Exp No:2 - Acc 1:95.96000000000001
 Exp ID:6 - Exp No:1 - Acc 1:96.14

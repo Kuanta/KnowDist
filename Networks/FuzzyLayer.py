@@ -170,7 +170,7 @@ class GaussianLayer(nn.Module):
                 self.mu.requires_grad = False
 
     def update_membs_with_kmeans(self, TrainData=None, TrainLabels=None):
-        if TrainData is not None and TrainLabels is not None:
+        if TrainData is not None:
             # KMeans Based Init #  TODO: Below code is from Derek Anderson, remove it after usage
             R = self.n_memberships  # our number of rules
             A = self.n_inputs  # our number of antecedents
@@ -186,7 +186,7 @@ class GaussianLayer(nn.Module):
             self.mu = torch.nn.Parameter(mu.float())
 
             # now, estimate the variances
-            sig = torch.ones((R, A))*3
+            sig = torch.ones((R, A))*20
             # for r in range(R):
             #     inds = np.where(kmeans.labels_ == r)
             #     classdata = torch.squeeze(TrainData[inds, :])
@@ -360,6 +360,7 @@ class FuzzyLayer(nn.Module):
             return rule_masks
 
     def forward(self, x):
+        x = x.float()
         batch_size = x.shape[0]
         if x.shape != (batch_size, self.n_inputs):
             raise Exception("Expected input shape of ", (1, self.n_inputs), " got ", x[0].shape)

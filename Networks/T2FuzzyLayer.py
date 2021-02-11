@@ -1,19 +1,24 @@
 from Networks.FuzzyLayer import *
 
 class T2FuzzyLayer(nn.Module):
-    """
-       Constructor
-       n_memberships (int): Number of membership functions
-       n_inputs (int): Number of inputs
-       n_outputs (int): Number of outputs
-       mu (array): Can give a pre initialized set of membership centers
-       sigma (array): Can give a pre initialized set of membership variances
-       """
 
     # TODO: clustering variable is pointless at this point since creating  every possible is not possible at the moment
     def __init__(self, n_memberships, n_inputs, n_outputs=1, clustering=True, use_gpu=True,
-                 learnable_memberships=True, n_random_rules=0, t_norm=TNormType.Product, use_sigma_scale=False):
+                 learnable_memberships=True, n_random_rules=0, t_norm=TNormType.Product, use_height_scale=True, use_sigma_scale=True):
+        '''
 
+
+        :param n_memberships: Number of membership functions
+        :param n_inputs: Number of inputs
+        :param n_outputs: Number of outputs
+        :param clustering: If set to true, rule number will be same as the membership value. Don't set to true for large inputs
+        :param use_gpu: True if use gpu. Not essential since a model can be transferred to gpu with torch functions
+        :param learnable_memberships: Set to true for learnable memberships (sigma and mu)
+        :param n_random_rules: Set to true to generate random rules
+        :param t_norm: Type of the t_norm operation. (Min or product)
+        :param use_height_scale: If set to true, lower membership function will be scaled
+        :param use_sigma_scale: If set to true, lower membership function's sigma will be scaled
+        '''
         super(T2FuzzyLayer, self).__init__()
         # Define params
         self.n_memberships = n_memberships
@@ -25,10 +30,7 @@ class T2FuzzyLayer(nn.Module):
         # unique number of rules must be saved by setting it as a non-learnable parameter
         self.t_norm = t_norm
         self.use_sigma_scale = use_sigma_scale
-        if use_sigma_scale:
-            print("Using Sigma Scale")
-        else:
-            print("Not using Sigma Scale")
+        self.use_height_scale = use_height_scale
 
         # Learnable Parameters
         self.fou_height = nn.Parameter(torch.rand((self.n_memberships, self.n_inputs), dtype=torch.float))
@@ -59,6 +61,7 @@ class T2FuzzyLayer(nn.Module):
         self.activation_layer.initialize_gaussians(TrainData, TrainLabels, params_filepath)
 
     def forward(self, x):
+        # Check if the input has the correct size
         batch_size = x.shape[0]
         if x.shape != (batch_size, self.n_inputs):
             raise Exception("Expected input shape of ", (1, self.n_inputs), " got ", x[0].shape)
@@ -68,8 +71,13 @@ class T2FuzzyLayer(nn.Module):
             sigma_scale = torch.sigmoid(self.sigma_scale)
         else:
             sigma_scale = None
-        lower_membs = self.activation_layer.forward(x, sigma_scale=sigma_scale)*torch.sigmoid(self.fou_height)
 
+        # if self.use_height_scale:
+        #     lower_membs = self.activation_layer.forward(x, sigma_scale=sigma_scale)*torch.sigmoid(self.fou_height)
+        # else:
+        #     lower_membs = self.activation_layer.forward(x, sigma_scale=sigma_scale)
+
+        lower_membs = upper_membs*torch.sigmoid(self.fou_height)
         upper_firings = self.rule_layer(upper_membs, self.t_norm)
         lower_firings = self.rule_layer(lower_membs, self.t_norm)
 
