@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import DeepTorch.Trainer as trn
+
 from Networks.Networks import Student, DistillNet, StudentEncoder
 from Networks.Teachers import TeacherCifar, TeacherMNIST, create_teacher
 from Networks.Encoders import CifarEncoder
@@ -147,7 +148,11 @@ def train_student(train_set, val_set, teacher, params):
     print("Initializing Student")
     train_set.shuffle_data()
     init_data, init_labels = train_set.get_batch(60000, 0, "cpu")
-    student.initialize(init_data, init_labels, load_params=False, filename="clusters7")
+    if params.fuzzy_type == 1:
+        sigma_mag = 3
+    else:
+        sigma_mag = 2
+    student.initialize(init_data, init_labels, load_params=False, filename="clusters7", sigma_mag=sigma_mag)
     #student.load_state_dict(torch.load(STUDENT_MODEL_PATH))
     print("Done Initializing Student")
     #student.fuzzy_layer.draw(5)
@@ -165,34 +170,46 @@ def train_student(train_set, val_set, teacher, params):
 
 def run_experiments(train_set, val_set, teacher, param):
     print("Running experiment ID:{} No:{}".format(param.exp_id, param.exp_no))
-    train_student_encoded(train_set, val_set, teacher, param)
+
+    if param.dataset == 3:
+        # Use autoencoder as dimensionality reduction for cifar
+        train_student_encoded(train_set, val_set, teacher, param)
+    elif param.dataset == 2:
+        # Use PCA as dimensionality reduction for fashion mnist
+        train_student(train_set, val_set, teacher, param)
+    elif param.dataset == 1:
+        # Use PCA as dimensionality reduction for mnist
+        train_student(train_set, val_set, teacher, param)
+    else:
+        print("Invalid dataset id")
 
 if __name__ == "__main__":
     import os
     from DeepTorch.Datasets.Cifar import CifarLoader
     from DeepTorch.Datasets.MNIST import MNISTLoader
+    from DeepTorch.Datasets.FashionMNIST import FashionMNISTLoader
     import argparse
 
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--exp_id", default=20, type=int)
+    parser.add_argument("--exp_id", default=27, type=int)
     parser.add_argument("--exp_no", default=1, type=int)
     parser.add_argument("--student_temp", default=1, type=float)
     parser.add_argument("--teacher_temp", default=2.5, type=float)
     parser.add_argument("--alpha", type=float, default=0.0, help="Alpha variable in the loss. 1 means full KL")
-    parser.add_argument("--n_rules", type=int, default=15, help="Number of memberships")
+    parser.add_argument("--n_rules", type=int, default=7, help="Number of memberships")
     parser.add_argument("--learn_ants", type=bool, default=True, help="If set to true, membership funcitons won't be learned")
     parser.add_argument("--n_epochs", type=int, default=20)
     parser.add_argument("--learn_drop_epochs", type=int, default=5, help="Number of epochs to train before updating learning rate")
-    parser.add_argument("--n_inputs", type=int, default=100, help="Number of inputs of fuzzy layer")
+    parser.add_argument("--n_inputs", type=int, default=30, help="Number of inputs of fuzzy layer")
     parser.add_argument("--fuzzy_type", type=int, default=1, help="Type of the fuzzy system (1 or 2)")
-    parser.add_argument("--dataset", type=int, default=2, help="MNIST:1, CIFAR:2")
+    parser.add_argument("--dataset", type=int, default=2, help="MNIST:1, FashionMNIST:2, Cifar:3")
     parser.add_argument("--use_sigma_scale", default=1, type=int)
-    parser.add_argument("--use_height_scale", default=1, type=int)
+    parser.add_argument("--use_height_scale", default=0, type=int)
 
     args = parser.parse_args()
     # Load dataset
-    if args.dataset == 2:
+    if args.dataset == 3:
         TEACHER_PATH = "./models/teacher/Cifar/teacher_cifar_resnet"
         cLoader = CifarLoader(validation_partition=0.9)
         train_set = cLoader.get_training_dataset()
@@ -213,6 +230,30 @@ if __name__ == "__main__":
         teacher_train_opts.use_gpu = True
         teacher_train_opts.save_model = True
         teacher_train_opts.saved_model_name = TEACHER_PATH
+
+    elif args.dataset == 2:
+        TEACHER_PATH = "./models/teacher/FashionMNIST/teacher_fashion_mnist"
+        fLoader = FashionMNISTLoader("./data")
+        train_set = fLoader.get_training_dataset()
+        val_set = fLoader.get_validation_dataset()
+        test_set = fLoader.get_test_dataset()
+
+
+        # Teacher Train Opts for FashionMNIST
+        teacher_train_opts = trn.TrainingOptions()
+        teacher_train_opts.optimizer_type = trn.OptimizerType.Adam
+        teacher_train_opts.learning_rate = 0.01
+        teacher_train_opts.learning_rate_update_by_step = False  # Update schedular at epochs
+        teacher_train_opts.learning_rate_drop_factor = 0.5
+        teacher_train_opts.learning_rate_drop_type = trn.SchedulerType.StepLr
+        teacher_train_opts.learning_rate_drop_step_count = 2
+        teacher_train_opts.batch_size = 64
+        teacher_train_opts.weight_decay = 1e-5
+        teacher_train_opts.n_epochs = 8
+        teacher_train_opts.use_gpu = True
+        teacher_train_opts.save_model = True
+        teacher_train_opts.saved_model_name = TEACHER_PATH
+
     else:
         TEACHER_PATH = "./models/teacher/MNIST/teacher_mnist"
         mLoader = MNISTLoader("./data")

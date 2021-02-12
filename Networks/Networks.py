@@ -43,15 +43,15 @@ class Student(nn.Module):
         self.n_outputs = n_outputs
 
         # PCA and Data params
-        self.evecs = nn.Parameter(torch.empty((784, n_inputs)))  # TODO: Don't hardcode 784
+        self.evecs = nn.Parameter(torch.zeros([784,5]))  # TODO: Don't hardcode 784
         self.evecs.requires_grad = False
-        self.trainMean = nn.Parameter(torch.empty((784, 1)))
+        self.trainMean = nn.Parameter(torch.tensor(0.0))
         self.trainMean.requires_grad = False
-        self.trainVar = nn.Parameter(torch.empty((784, 1)))
+        self.trainVar = nn.Parameter(torch.tensor(0.0))
         self.trainMean.requires_grad = False
-        self.trainMax = nn.Parameter()
+        self.trainMax = nn.Parameter(torch.tensor(0.0))
         self.trainMax.requires_grad = False
-        self.trainMin = nn.Parameter()
+        self.trainMin = nn.Parameter(torch.tensor(0.0))
         self.trainMin.requires_grad = False
 
         if fuzzy_type == 1:
@@ -70,7 +70,7 @@ class Student(nn.Module):
         x = self.fuzzy_layer.forward(self.preprocess_data(x))
         return x
 
-    def initialize(self, init_data: torch.Tensor, init_labels, load_params=True, filename=None):
+    def initialize(self, init_data: torch.Tensor, init_labels, load_params=True, filename=None, sigma_mag=3):
         '''
         Initializes the network.
         1) Fits the PCA
@@ -83,14 +83,14 @@ class Student(nn.Module):
         :return:
         '''
 
-        fitted = self.fit_pca_numpy(init_data, init_labels)  # 1
+        fitted = self.fit_pca(init_data, init_labels)  # 1
 
         if load_params and filename is not None:
             self.fuzzy_layer.activation_layer.load_parameters(filename)
         else:
-            self.fuzzy_layer.activation_layer.initialize_gaussians(fitted.detach().cpu().numpy(), init_labels, filename)
+            self.fuzzy_layer.activation_layer.initialize_gaussians(fitted, init_labels, filename, sigma_mag=sigma_mag)
 
-    def fit_pca(self, init_data:torch.Tensor, init_labels):
+    def fit_pca_svd(self, init_data:torch.Tensor, init_labels):
 
         # Standardize matrix
         flattened = torch.flatten(init_data, start_dim=1)
@@ -110,7 +110,7 @@ class Student(nn.Module):
         self.trainVar.requires_grad = False
         return (reduced-self.trainMean)/self.trainVar
 
-    def fit_pca_numpy(self, init_data, init_labels):
+    def fit_pca(self, init_data, init_labels):
         flattened = torch.flatten(init_data, start_dim=1)
         self.pca = PCA(n_components=self.n_inputs)
         self.pca.fit(flattened)

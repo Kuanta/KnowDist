@@ -68,7 +68,7 @@ class T2FuzzyLayer(nn.Module):
 
         upper_membs = self.activation_layer.forward(x)
         if self.use_sigma_scale:
-            sigma_scale = torch.sigmoid(self.sigma_scale)
+            sigma_scale = torch.sigmoid(self.sigma_scale)*0.5+0.5  # TODO: Sigmoid may 0 some sigmoids which causes null losses. Can try by multiplying with 0.5 and summin 0.5
         else:
             sigma_scale = None
 

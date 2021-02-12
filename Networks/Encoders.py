@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from DeepTorch.Datasets.Cifar import CifarLoader
 import DeepTorch.Trainer as trn
 
@@ -30,10 +31,15 @@ class CifarEncoder(nn.Module):
         return x
 
     def forward(self, x):
+        # Encoder
         x = self.encoder(x)
         x = self.fc_1(x.view(x.shape[0], -1))
+        x = F.relu(x)
         x = self.fc_2(x)
+
+        # Decoder
         x = self.fc_3(x)
+        x = F.relu(x)
         x = self.fc_4(x)
         x = self.decoder(x.view(-1,16,24,24))
         return x
@@ -74,7 +80,8 @@ def train_encoder():
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-        print('epoch [{}/{}], loss:{:.4f}'.format(e + 1, num_epochs, loss.item()))
+            if iter % 200 == 0:
+                print('epoch [{}/{}], iter [{}/{}], loss:{:.4f}'.format(e + 1, num_epochs, iter+1, num_iters, loss.item()))
     torch.save(net.state_dict(), "cifar_encoder")
 
 if __name__ == "__main__":

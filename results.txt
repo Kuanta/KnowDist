@@ -1,35 +1,18 @@
-Exp ID:1 - Exp No:1 - Acc 1:90.42
-Exp ID:1 - Exp No:2 - Acc 1:90.3
-Exp ID:1 - Exp No:3 - Acc 1:89.77000000000001
-Exp ID:1 - Exp No:4 - Acc 1:90.22
-Exp ID:1 - Exp No:5 - Acc 1:89.85
 
-Exp ID:2 - Exp No:1 - Acc 1:92.29
-Exp ID:2 - Exp No:2 - Acc 1:92.01
-Exp ID:2 - Exp No:3 - Acc 1:92.05
-Exp ID:2 - Exp No:4 - Acc 1:91.67
-Exp ID:2 - Exp No:5 - Acc 1:91.91
+Exp ID:35 - Exp No:1 - Acc 1:33.82
+Exp ID:36 - Exp No:1 - Acc 1:28.249999999999996
+Exp ID:37 - Exp No:1 - Acc 1:40.11
+Exp ID:38 - Exp No:1 - Acc 1:31.369999999999997
+Exp ID:39 - Exp No:1 - Acc 1:59.019999999999996
+Exp ID:40 - Exp No:1 - Acc 1:68.14
+Exp ID:41 - Exp No:1 - Acc 1:68.11
+Exp ID:42 - Exp No:1 - Acc 1:68.13
 
-Exp ID:3 - Exp No:1 - Acc 1:95.03
-Exp ID:3 - Exp No:2 - Acc 1:95.14
-Exp ID:3 - Exp No:3 - Acc 1:94.85
-Exp ID:3 - Exp No:4 - Acc 1:95.02000000000001
-Exp ID:3 - Exp No:5 - Acc 1:94.77
-
-Exp ID:4 - Exp No:1 - Acc 1:95.38
-Exp ID:4 - Exp No:2 - Acc 1:95.44
-Exp ID:4 - Exp No:3 - Acc 1:95.78999999999999
-Exp ID:4 - Exp No:4 - Acc 1:95.39
-Exp ID:4 - Exp No:5 - Acc 1:95.11
-
-Exp ID:5 - Exp No:1 - Acc 1:95.53
-Exp ID:5 - Exp No:2 - Acc 1:95.32000000000001
-Exp ID:5 - Exp No:3 - Acc 1:95.14
-Exp ID:5 - Exp No:4 - Acc 1:95.41
-Exp ID:5 - Exp No:5 - Acc 1:95.37
-
-Exp ID:6 - Exp No:5 - Acc 1:96.26000000000001
-Exp ID:6 - Exp No:4 - Acc 1:96.26000000000001
-Exp ID:6 - Exp No:3 - Acc 1:96.26000000000001
-Exp ID:6 - Exp No:2 - Acc 1:95.96000000000001
-Exp ID:6 - Exp No:1 - Acc 1:96.14
+Exp ID:27 - Exp No:1 - Acc 1:67.44
+Exp ID:28 - Exp No:1 - Acc 1:79.65
+Exp ID:29 - Exp No:1 - Acc 1:80.06
+Exp ID:30 - Exp No:1 - Acc 1:79.25999999999999
+Exp ID:31 - Exp No:1 - Acc 1:77.99000000000001
+Exp ID:32 - Exp No:1 - Acc 1:79.84
+Exp ID:33 - Exp No:1 - Acc 1:79.78
+Exp ID:34 - Exp No:1 - Acc 1:80.02
