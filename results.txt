@@ -134,3 +134,10 @@ Exp ID:166 - Exp No:1 - Acc 1:62.6
 Exp ID:167 - Exp No:1 - Acc 1:71.16
 Exp ID:168 - Exp No:1 - Acc 1:71.22
 Exp ID:169 - Exp No:1 - Acc 1:71.76
+Exp ID:186 - Exp No:1 - Acc 1:24.98
+Exp ID:187 - Exp No:1 - Acc 1:39.5
+Exp ID:188 - Exp No:1 - Acc 1:27.83
+Exp ID:189 - Exp No:1 - Acc 1:26.46
+Exp ID:190 - Exp No:1 - Acc 1:54.44
+Exp ID:191 - Exp No:1 - Acc 1:69.13
+Exp ID:27 - Exp No:1 - Acc 1:68.65

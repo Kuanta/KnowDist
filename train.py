@@ -93,7 +93,8 @@ def train_student_encoded(train_set, val_set, teacher, params):
     # student.fuzzy_layer.draw(5)
     # plt.plot(student.feature_extraction(init_data)[:,1:2], np.zeros(init_data.shape[0]), 'o')
     # plt.show()
-    student.to("cuda:0")
+    device = "cuda:"+args.gpu_no
+    student.to(device)
     # Define distillation network
     dist_net = DistillNet(student, teacher)
     trainer = trn.Trainer(dist_net, train_opts)
@@ -158,7 +159,11 @@ def train_student(train_set, val_set, teacher, params):
     #student.fuzzy_layer.draw(5)
     #plt.plot(student.feature_extraction(init_data)[:,1:2], np.zeros(init_data.shape[0]), 'o')
     #plt.show()
-    student.to("cuda:0")
+    device = "cuda:{}".format(args.gpu_no)
+    student.to(device)
+    for param in student.parameters():
+        print(param.device)
+        break
     # Define distillation network
     dist_net = DistillNet(student, teacher)
     trainer = trn.Trainer(dist_net, train_opts)
@@ -206,12 +211,13 @@ if __name__ == "__main__":
     parser.add_argument("--learn_drop_epochs", type=int, default=5, help="Number of epochs to train before updating learning rate")
     parser.add_argument("--n_inputs", type=int, default=30, help="Number of inputs of fuzzy layer")
     parser.add_argument("--fuzzy_type", type=int, default=1, help="Type of the fuzzy system (1 or 2)")
-    parser.add_argument("--dataset", type=int, default=4, help="MNIST:1, FashionMNIST:2, Cifar:3")
+    parser.add_argument("--dataset", type=int, default=1, help="MNIST:1, FashionMNIST:2, Cifar:3")
     parser.add_argument("--use_sigma_scale", default=1, type=int)
     parser.add_argument("--use_height_scale", default=0, type=int)
+    parser.add_argument("--gpu_no", default=0, type=int)
 
     args = parser.parse_args()
-    #args.exp_id = "{}_{}_{}".format(args.n_input, args.n_rules, args.dataset)
+    args.exp_id = "{}_{}_{}_{}_{}_{}_{}_{}".format(args.dataset, args.fuzzy_type, args.n_inputs, args.n_rules, args.alpha, args.teacher_temp, args.use_sigma_scale, args.use_height_scale)
     # Load dataset
     if args.dataset == 4:  # Quick Draw
         TEACHER_PATH = "./models/teacher/QuickDraw/teacher_quick_draw"

@@ -78,3 +78,15 @@ python test.py --exp_id=166 --exp_no=1  --n_rules=15 --fuzzy_type=1 --dataset=1 
 python test.py --exp_id=167 --exp_no=1  --n_rules=15 --fuzzy_type=2 --dataset=1 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
 python test.py --exp_id=168 --exp_no=1  --n_rules=15 --fuzzy_type=2 --dataset=1 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=1
 python test.py --exp_id=169 --exp_no=1  --n_rules=15 --fuzzy_type=2 --dataset=1 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=0
+
+python test.py --exp_id=186 --exp_no=1 --n_rules=15 --fuzzy_type=1 --dataset=2 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
+python test.py --exp_id=187 --exp_no=1 --n_rules=15 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
+python test.py --exp_id=188 --exp_no=1 --n_rules=15 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=1
+python test.py --exp_id=189 --exp_no=1 --n_rules=15 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=0
+python test.py --exp_id=190 --exp_no=1  --n_rules=15 --fuzzy_type=1 --dataset=2 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
+python test.py --exp_id=191 --exp_no=1  --n_rules=15 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
+python test.py --exp_id=192 --exp_no=1  --n_rules=15 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=1
+python test.py --exp_id=193 --exp_no=1  --n_rules=15 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=0
+
+
+
