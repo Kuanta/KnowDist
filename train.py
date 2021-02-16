@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import DeepTorch.Trainer as trn
 
 from Networks.Networks import Student, DistillNet, StudentEncoder
-from Networks.Teachers import TeacherCifar, TeacherMNIST, create_teacher
+from Networks.Teachers import TeacherCifar, TeacherMNIST, TeacherQuickDraw, create_teacher
 from Networks.Encoders import CifarEncoder
 from distillation import DistillationLoss
 import config as cfg
@@ -171,7 +171,9 @@ def train_student(train_set, val_set, teacher, params):
 def run_experiments(train_set, val_set, teacher, param):
     print("Running experiment ID:{} No:{}".format(param.exp_id, param.exp_no))
 
-    if param.dataset == 3:
+    if param.dataset == 4:
+        train_student(train_set, val_set, teacher, param)
+    elif param.dataset == 3:
         # Use autoencoder as dimensionality reduction for cifar
         train_student_encoded(train_set, val_set, teacher, param)
     elif param.dataset == 2:
@@ -185,6 +187,7 @@ def run_experiments(train_set, val_set, teacher, param):
 
 if __name__ == "__main__":
     import os
+    from DeepTorch.Datasets.QuickDraw import QuickDrawLoader
     from DeepTorch.Datasets.Cifar import CifarLoader
     from DeepTorch.Datasets.MNIST import MNISTLoader
     from DeepTorch.Datasets.FashionMNIST import FashionMNISTLoader
@@ -192,7 +195,7 @@ if __name__ == "__main__":
 
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--exp_id", default=27, type=int)
+    parser.add_argument("--exp_id", default=99, type=int)
     parser.add_argument("--exp_no", default=1, type=int)
     parser.add_argument("--student_temp", default=1, type=float)
     parser.add_argument("--teacher_temp", default=2.5, type=float)
@@ -203,13 +206,38 @@ if __name__ == "__main__":
     parser.add_argument("--learn_drop_epochs", type=int, default=5, help="Number of epochs to train before updating learning rate")
     parser.add_argument("--n_inputs", type=int, default=30, help="Number of inputs of fuzzy layer")
     parser.add_argument("--fuzzy_type", type=int, default=1, help="Type of the fuzzy system (1 or 2)")
-    parser.add_argument("--dataset", type=int, default=2, help="MNIST:1, FashionMNIST:2, Cifar:3")
+    parser.add_argument("--dataset", type=int, default=4, help="MNIST:1, FashionMNIST:2, Cifar:3")
     parser.add_argument("--use_sigma_scale", default=1, type=int)
     parser.add_argument("--use_height_scale", default=0, type=int)
 
     args = parser.parse_args()
+    #args.exp_id = "{}_{}_{}".format(args.n_input, args.n_rules, args.dataset)
     # Load dataset
-    if args.dataset == 3:
+    if args.dataset == 4:  # Quick Draw
+        TEACHER_PATH = "./models/teacher/QuickDraw/teacher_quick_draw"
+        metadata = [['airplanes.npy',0], ['apple.npy', 1], ['bread.npy', 2], ['dog.npy', 3], ['guitar.npy', 4], ['lion.npy',5],
+                    ['star.npy',6], ['zebra.npy',7], ['anvil.npy',8], ['car.npy',9]]
+        qdLoader = QuickDrawLoader(metadata=metadata, data_root='./data/QuickDraw', max_data=10000)
+        train_set = qdLoader.get_training_dataset()
+        val_set = qdLoader.get_validation_dataset()
+        test_set = qdLoader.get_test_dataset()
+
+        # Teacher Options for QuickDraw
+        teacher_train_opts = trn.TrainingOptions()
+        teacher_train_opts.optimizer_type = trn.OptimizerType.Adam
+        teacher_train_opts.learning_rate = 0.01
+        teacher_train_opts.learning_rate_update_by_step = False  # Update schedular at epochs
+        teacher_train_opts.learning_rate_drop_factor = 0.5
+        teacher_train_opts.learning_rate_drop_type = trn.SchedulerType.StepLr
+        teacher_train_opts.learning_rate_drop_step_count = 2
+        teacher_train_opts.batch_size = 64
+        teacher_train_opts.weight_decay = 1e-5
+        teacher_train_opts.n_epochs = 8
+        teacher_train_opts.use_gpu = True
+        teacher_train_opts.save_model = True
+        teacher_train_opts.saved_model_name = TEACHER_PATH
+
+    elif args.dataset == 3:
         TEACHER_PATH = "./models/teacher/Cifar/teacher_cifar_resnet"
         cLoader = CifarLoader(validation_partition=0.9)
         train_set = cLoader.get_training_dataset()
