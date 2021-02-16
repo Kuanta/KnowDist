@@ -302,6 +302,7 @@ python train.py --exp_id=112 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --al
 python train.py --exp_id=113 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=7 --fuzzy_type=2 --dataset=1 --n_inputs=30 --use_sigma_scale=1 --use_height_scale=1
 python train.py --exp_id=114 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=7 --fuzzy_type=2 --dataset=1 --n_inputs=30 --use_sigma_scale=1 --use_height_scale=0
 
+# DO these again
 python train.py --exp_id=115 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.0 --n_rules=15 --fuzzy_type=1 --dataset=1 --n_inputs=30 --use_sigma_scale=0 --use_height_scale=1
 python train.py --exp_id=116 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.0 --n_rules=15 --fuzzy_type=2 --dataset=1 --n_inputs=30 --use_sigma_scale=0 --use_height_scale=1
 python train.py --exp_id=117 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.0 --n_rules=15 --fuzzy_type=2 --dataset=1 --n_inputs=30 --use_sigma_scale=1 --use_height_scale=1
@@ -356,14 +357,41 @@ python train.py --exp_id=159 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --al
 python train.py --exp_id=160 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=7 --fuzzy_type=2 --dataset=1 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=1
 python train.py --exp_id=161 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=7 --fuzzy_type=2 --dataset=1 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=0
 
-python train.py --exp_id=115 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.0 --n_rules=15 --fuzzy_type=1 --dataset=1 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
-python train.py --exp_id=116 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.0 --n_rules=15 --fuzzy_type=2 --dataset=1 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
-python train.py --exp_id=117 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.0 --n_rules=15 --fuzzy_type=2 --dataset=1 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=1
-python train.py --exp_id=118 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.0 --n_rules=15 --fuzzy_type=2 --dataset=1 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=0
-python train.py --exp_id=119 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=15 --fuzzy_type=1 --dataset=1 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
-python train.py --exp_id=120 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=15 --fuzzy_type=2 --dataset=1 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
-python train.py --exp_id=121 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=15 --fuzzy_type=2 --dataset=1 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=1
-python train.py --exp_id=122 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=15 --fuzzy_type=2 --dataset=1 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=0
+python train.py --exp_id=162 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.0 --n_rules=15 --fuzzy_type=1 --dataset=1 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
+python train.py --exp_id=163 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.0 --n_rules=15 --fuzzy_type=2 --dataset=1 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
+python train.py --exp_id=164 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.0 --n_rules=15 --fuzzy_type=2 --dataset=1 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=1
+python train.py --exp_id=165 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.0 --n_rules=15 --fuzzy_type=2 --dataset=1 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=0
+python train.py --exp_id=166 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=15 --fuzzy_type=1 --dataset=1 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
+python train.py --exp_id=167 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=15 --fuzzy_type=2 --dataset=1 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
+python train.py --exp_id=168 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=15 --fuzzy_type=2 --dataset=1 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=1
+python train.py --exp_id=169 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=15 --fuzzy_type=2 --dataset=1 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=0
+
+python train.py --exp_id=170 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.0 --n_rules=3 --fuzzy_type=1 --dataset=2 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
+python train.py --exp_id=171 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.0 --n_rules=3 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
+python train.py --exp_id=172 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.0 --n_rules=3 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=1
+python train.py --exp_id=173 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.0 --n_rules=3 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=0
+python train.py --exp_id=174 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=3 --fuzzy_type=1 --dataset=2 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
+python train.py --exp_id=175 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=3 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
+python train.py --exp_id=176 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=3 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=1
+python train.py --exp_id=177 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=3 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=0
+
+python train.py --exp_id=178 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.0 --n_rules=7 --fuzzy_type=1 --dataset=2 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
+python train.py --exp_id=179 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.0 --n_rules=7 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
+python train.py --exp_id=180 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.0 --n_rules=7 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=1
+python train.py --exp_id=181 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.0 --n_rules=7 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=0
+python train.py --exp_id=182 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=7 --fuzzy_type=1 --dataset=2 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
+python train.py --exp_id=183 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=7 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
+python train.py --exp_id=184 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=7 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=1
+python train.py --exp_id=185 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=7 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=0
+
+python train.py --exp_id=186 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.0 --n_rules=15 --fuzzy_type=1 --dataset=2 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
+python train.py --exp_id=187 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.0 --n_rules=15 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
+python train.py --exp_id=188 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.0 --n_rules=15 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=1
+python train.py --exp_id=189 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.0 --n_rules=15 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=0
+python train.py --exp_id=190 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=15 --fuzzy_type=1 --dataset=2 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
+python train.py --exp_id=191 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=15 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
+python train.py --exp_id=192 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=15 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=1
+python train.py --exp_id=193 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=15 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=0
 
 
 
