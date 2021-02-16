@@ -1,0 +1,8 @@
+python train.py --exp_id=1 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.0  --n_rules=3 --fuzzy_type=1 --dataset=2 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
+python train.py --exp_id=1 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.0  --n_rules=3 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
+python train.py --exp_id=1 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.0  --n_rules=3 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=1
+python train.py --exp_id=1 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.0  --n_rules=3 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=0
+python train.py --exp_id=1 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=3 --fuzzy_type=1 --dataset=2 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
+python train.py --exp_id=1 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=3 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=0 --use_height_scale=1
+python train.py --exp_id=1 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=3 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=1
+python train.py --exp_id=1 --exp_no=1 --student_temp=1 --teacher_temp=2.5 --alpha=0.75 --n_rules=3 --fuzzy_type=2 --dataset=2 --n_inputs=5 --use_sigma_scale=1 --use_height_scale=0

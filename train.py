@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import DeepTorch.Trainer as trn
 
 from Networks.Networks import Student, DistillNet, StudentEncoder
-from Networks.Teachers import TeacherCifar, TeacherMNIST, TeacherQuickDraw, create_teacher
+from Networks.Teachers import TeacherCifar, TeacherMNIST, TeacherQuickDraw, TeacherResNet50, create_teacher
 from Networks.Encoders import CifarEncoder
 from distillation import DistillationLoss
 import config as cfg
@@ -195,7 +195,7 @@ if __name__ == "__main__":
 
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--exp_id", default=99, type=int)
+    parser.add_argument("--exp_id", default=9999, type=int)
     parser.add_argument("--exp_no", default=1, type=int)
     parser.add_argument("--student_temp", default=1, type=float)
     parser.add_argument("--teacher_temp", default=2.5, type=float)

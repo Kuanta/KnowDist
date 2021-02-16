@@ -149,9 +149,6 @@ class TeacherResNet50(nn.Module):
         super(TeacherResNet50, self).__init__()
         self.model = models.resnet50(pretrained=True, progress=True)
 
-        for param in self.model.parameters():
-            param.requires_grad = False
-
         self.model.fc = nn.Sequential(
             nn.Linear(2048, 512),
             nn.ReLU(inplace=True),
