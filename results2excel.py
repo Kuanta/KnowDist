@@ -8,11 +8,10 @@ class FuzzyType:
 
 n_inputs = [5, 15, 30]
 n_memberships = [3, 7, 15]
-alpha_vals = [0.0, 0.75]
 fuzzy_types = [FuzzyType(1, 0, 1), FuzzyType(2,0,1), FuzzyType(2,1,1), FuzzyType(2,1,0)]
 datasets = {'MNIST':1, 'FashionMNIST':2, 'QuickDraw':4}
 
-def create_sheet(workbook, name, data):
+def create_sheet(workbook, name, data, alpha):
     worksheet = workbook.add_worksheet()
     worksheet.name = name
     merge_format = workbook.add_format({
@@ -65,34 +64,44 @@ def create_sheet(workbook, name, data):
     for n_input in n_inputs:
         for n_membership in n_memberships:
             for f_type in fuzzy_types:
-                for alpha in alpha_vals:
+                exp_id = "{}_{}_{}_{}_{}_{}_{}_{}".format(datasets[name], f_type.type, n_input, n_membership,
+                                                          alpha, 2.5, f_type.use_sigma_scale,
+                                                          f_type.use_height_scale)
+                if exp_id in data.keys():
+                    max_acc = data[exp_id]["max_acc"]
+                    avg_acc = data[exp_id]["avg_acc"]
 
-                    exp_id = "{}_{}_{}_{}_{}_{}_{}_{}".format(datasets[name], f_type.type, n_input, n_membership,
-                                                              alpha, 2.5, f_type.use_sigma_scale,
-                                                              f_type.use_height_scale)
-                    if exp_id in data.keys():
-                        max_acc = data[exp_id]["max_acc"]
-                        avg_acc = data[exp_id]["avg_acc"]
+                    n_input_index = n_inputs.index(n_input)
+                    n_membership_index = n_memberships.index(n_membership)
+                    fuzzy_index = fuzzy_types.index(f_type)
+                    row_index = 2 + n_input_index * 3 + n_membership_index
+                    col_index = 2 + fuzzy_index * 2
+                    max_index = col_index
+                    avg_index = col_index + 1
+                    worksheet.write(row_index, max_index, max_acc)
+                    worksheet.write(row_index, avg_index, avg_acc)
 
-                        n_input_index = n_inputs.index(n_input)
-                        n_membership_index = n_memberships.index(n_membership)
-                        fuzzy_index = fuzzy_types.index(f_type)
-                        row_index = 2 + n_input_index*3 + n_membership_index
-                        col_index = 2 + fuzzy_index*2
-                        max_index = col_index
-                        avg_index = col_index + 1
-                        worksheet.write(row_index, max_index, max_acc)
-                        worksheet.write(row_index, avg_index, avg_acc)
+
 
 
 if __name__ == "__main__":
     import json
+    # For Know Dist
     workbook = xlsxwriter.Workbook("table.xlsx")
     f = open("./results.json")
     data = json.load(f)
     f.close()
 
-    create_sheet(workbook, "MNIST", data)
-    create_sheet(workbook, "FashionMNIST", data)
-    create_sheet(workbook, "QuickDraw", data)
+    create_sheet(workbook, "MNIST", data, 0.75)
+    create_sheet(workbook, "FashionMNIST", data, 0.75)
+    create_sheet(workbook, "QuickDraw", data, 0.75)
     workbook.close()
+
+    # Without Know Dist
+    workbook = xlsxwriter.Workbook("table_no_know.xlsx")
+
+    create_sheet(workbook, "MNIST", data, 0.0)
+    create_sheet(workbook, "FashionMNIST", data, 0.0)
+    create_sheet(workbook, "QuickDraw", data, 0.0)
+    workbook.close()
+

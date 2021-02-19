@@ -12,11 +12,18 @@ from DeepTorch.Datasets.FashionMNIST import FashionMNISTLoader
 
 def test_accuracy(model, data, labels):
     data = model.forward(data)
-    outputs = data.cpu().data.numpy()
+    outputs = torch.nn.functional.softmax(data, dim=1).cpu().data.numpy()
     outputs = [np.argmax(pred) for pred in outputs]
     labels = labels.cpu().data.numpy()
     corrects = [outputs[i] == labels[i] for i in range(len(outputs))]
     return sum(corrects) / len(corrects) * 100
+
+    # data = model.forward(data)
+    # outputs = data.cpu().data.numpy()
+    # outputs = [np.argmax(pred) for pred in outputs]
+    # labels = labels.cpu().data.numpy()
+    # corrects = [outputs[i] == labels[i] for i in range(len(outputs))]
+    # return sum(corrects) / len(corrects) * 100
 
 def test_experiment(student, test_set, exp_id, exp_no):
     # Check result json
@@ -32,7 +39,8 @@ def test_experiment(student, test_set, exp_id, exp_no):
         print("Model not trained yet")
         return 0
     student.load_state_dict(torch.load(model_path, map_location="cpu"))
-    test_data, test_labels = test_set.get_batch(10000, 0, "cpu")
+    test_set.shuffle_data()
+    test_data, test_labels = test_set.get_batch(-1, 0, "cpu")
 
     # teacher = Teacher(10)
     # teacher.load_state_dict(torch.load(cfg.TEACHER_MODEL_PATH))
@@ -70,15 +78,15 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp_id", type=int, default=1)
-    parser.add_argument("--exp_no", type=int, default=2)
-    parser.add_argument("--fuzzy_type", default=1, type=int)
+    parser.add_argument("--exp_no", type=int, default=1)
+    parser.add_argument("--fuzzy_type", default=2, type=int)
     parser.add_argument("--use_sigma_scale", type=int, default=0)
     parser.add_argument("--use_height_scale", type=int, default=1)
     parser.add_argument("--teacher_temp", type=float, default=2.5)
-    parser.add_argument("--alpha", type=float, default=0.0)
-    parser.add_argument("--n_inputs", type=int, default=30)
+    parser.add_argument("--alpha", type=float, default=0.75)
+    parser.add_argument("--n_inputs", type=int, default=15)
     parser.add_argument("--n_rules", type=int, default=7)
-    parser.add_argument("--dataset", type=int, default=1)
+    parser.add_argument("--dataset", type=int, default=4)
 
     args = parser.parse_args()
     args.exp_id = "{}_{}_{}_{}_{}_{}_{}_{}".format(args.dataset, args.fuzzy_type, args.n_inputs, args.n_rules,
@@ -91,6 +99,7 @@ if __name__ == "__main__":
                     ['star.npy',6], ['zebra.npy',7], ['anvil.npy',8], ['car.npy',9]]
         qdLoader = QuickDrawLoader(metadata=metadata, data_root='./data/QuickDraw', max_data=10000)
         train_set = qdLoader.get_training_dataset()
+        val_set = qdLoader.get_validation_dataset()
         test_set = qdLoader.get_test_dataset()
 
     elif args.dataset == 3:  # Cifar
@@ -98,7 +107,6 @@ if __name__ == "__main__":
         train_set = cLoader.get_training_dataset()
         test_set = cLoader.get_test_dataset()
     elif args.dataset == 2:
-        print("Fashion")
         fLoader = FashionMNISTLoader("./data")
         train_set = fLoader.get_training_dataset()
         test_set = fLoader.get_test_dataset()
@@ -113,8 +121,12 @@ if __name__ == "__main__":
     init_data, init_labels = train_set.get_batch(60000, 0, "cpu")
     student.fit_pca(init_data, init_labels)
     student.to("cpu")
-    acc1 = test_experiment(student, test_set, args.exp_id, args.exp_no)
-    print("Exp ID:{} No:{} Acc:{}".format(args.exp_id, args.exp_no, acc1))
+
+    root = "./models/{}/{}".format(args.exp_id, args.exp_no)
+    model_path = root + "/student"
+    if os.path.exists(model_path):
+        acc1 = test_experiment(student, val_set, args.exp_id, args.exp_no)
+        print("Exp ID:{} No:{} Acc:{}".format(args.exp_id, args.exp_no, acc1))
 
     # info = trn.get_info(info_path, print_out=False)
     # acc1 = info[4][-1]
